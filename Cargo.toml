@@ -1,0 +1,23 @@
+[package]
+name = "rag-rs"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+qdrant-client = { git = "https://github.com/qdrant/rust-client", branch = "master" }
+openai-api-rs = "4.0.4"
+clap = { version = "4.1.8", features = ["derive"] }
+llm = { git = "https://github.com/rustformers/llm" , branch = "main" }
+anyhow = "1.0.79"
+tonic = "0.10.2"
+tokio = { version = "1.35.1", features = ["rt-multi-thread"] }
+serde = "1.0.196"
+serde_json = "1.0.113"
+
+[[bin]]
+name = "my_binary"
+path = "src/main.rs"
+
+[lib]
+name = "rag_rs"
+path = "src/lib.rs"
