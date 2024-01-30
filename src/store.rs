@@ -13,10 +13,6 @@ use rag_rs::Entry;
 pub async fn search(entry: Entry, index: &str) -> Result<()> {
 	let client = QdrantClient::from_url("http://localhost:6334").build()?;
 
-	/*
-    client.delete_collection(collection_name).await?;
-
-	*/
     client
         .create_collection(&CreateCollection {
             collection_name: index.into(),
@@ -66,5 +62,11 @@ pub async fn insert(point: Entry, index: &str) -> Result<()> {
     client
         .upsert_points_blocking(index, None, points, None)
         .await?;
+	Ok(())
+}
+
+pub async fn delete(index: &str) -> Result<()> { 
+	let client = QdrantClient::from_url("http://localhost:6334").build()?;
+    client.delete_collection(index).await?;
 	Ok(())
 }
