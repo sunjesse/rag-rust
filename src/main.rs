@@ -7,6 +7,11 @@ mod utils;
 mod store;
 mod embeddings;
 
+// TODO:
+//	1. index vector db job (upload csv -> llm -> store embeddings)
+//	2. reformat prompt to use retrieved points
+//	3. prompt llm
+//	4. move quadrantclient loading to centralized location
 
 fn main() -> Result<()> {
     let args = Args::parse();
