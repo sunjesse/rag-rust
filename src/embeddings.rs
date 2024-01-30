@@ -23,25 +23,25 @@ pub fn get_embeddings(
 }
 
 pub fn load_and_embed(args: Args) -> (String, Vec<f32>) {
-	let source = args.to_tokenizer_source();
-	let arch = args.model_architecture;
-	let path = args.model_path;
-	let query = args
-		.query
-		.as_deref()
-		.unwrap_or("This is a default query");
-	let params = llm::ModelParameters::default();
-	let model = llm::load_dynamic(
-		Some(arch),
-		&path,
-		source,
-		params,
-		llm::load_progress_callback_stdout,
-	)
-	.unwrap_or_else(|err| {
-		panic!("Failed to load {arch} model from {path:?}: {err}")
-	});
-	let infer_params = llm::InferenceParameters::default();
-	let embeddings = get_embeddings(model.as_ref(), &infer_params, query);
-	return (query.to_string(), embeddings);
+    let source = args.to_tokenizer_source();
+    let arch = args.model_architecture;
+    let path = args.model_path;
+    let query = args
+        .query
+        .as_deref()
+        .unwrap_or("This is a default query");
+    let params = llm::ModelParameters::default();
+    let model = llm::load_dynamic(
+        Some(arch),
+        &path,
+        source,
+        params,
+        llm::load_progress_callback_stdout,
+    )
+    .unwrap_or_else(|err| {
+        panic!("Failed to load {arch} model from {path:?}: {err}")
+    });
+    let infer_params = llm::InferenceParameters::default();
+    let embeddings = get_embeddings(model.as_ref(), &infer_params, query);
+    return (query.to_string(), embeddings);
 }

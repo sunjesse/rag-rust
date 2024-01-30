@@ -11,9 +11,9 @@ use std::convert::TryInto;
 use rag_rs::Entry;
 
 pub async fn search(entry: Entry, index: &str) -> Result<()> {
-	let embedding = entry.embedding.clone();
-	
-	insert(entry, index).await?;
+    let embedding = entry.embedding.clone();
+    
+    insert(entry, index).await?;
 
     let neighbours = client
         .search_points(&SearchPoints {
@@ -22,54 +22,54 @@ pub async fn search(entry: Entry, index: &str) -> Result<()> {
             //filter: Some(Filter::all([Condition::matches("id", entry.id)])),
             limit: 10,
             with_payload: Some(true.into()),
-			..Default::default()
+            ..Default::default()
         })
         .await?;
-	let nearest = neighbours.result.into_iter().next().unwrap();
-	let mut payload = nearest.payload;
-	println!("{}", payload.remove("query").unwrap().into_json());
-	Ok(())
+    let nearest = neighbours.result.into_iter().next().unwrap();
+    let mut payload = nearest.payload;
+    println!("{}", payload.remove("query").unwrap().into_json());
+    Ok(())
 }
 
 pub async fn insert(point: Entry, index: &str) -> Result<()> {
-	let client = QdrantClient::from_url("http://localhost:6334").build()?;
-	let payload: Payload = json!(
-		{
+    let client = QdrantClient::from_url("http://localhost:6334").build()?;
+    let payload: Payload = json!(
+        {
             "query": {
                 "text": point.query
             }
         }
     )
-	.try_into()
-	.unwrap();
-	let points = vec![PointStruct::new(1, point.embedding.clone(), payload)];
-	client
-		.upsert_points_blocking(index, None, points, None)
+    .try_into()
+    .unwrap();
+    let points = vec![PointStruct::new(1, point.embedding.clone(), payload)];
+    client
+        .upsert_points_blocking(index, None, points, None)
         .await?;
-	Ok(())
+    Ok(())
 }
 
 pub async fn create_index(index: &str) -> Result<()> {
-	let client = QdrantClient::from_url("http://localhost:6334").build()?;
+    let client = QdrantClient::from_url("http://localhost:6334").build()?;
 
     client
-		.create_collection(&createcollection {
-			collection_name: index.into(),
-			vectors_config: Some(VectorsConfig {
-				config: Some(Config::Params(VectorParams {
-					size: entry.embedding.len() as u64,
-					distance: Distance::Cosine.into(),
-					..Default::default()
-				})),
-			}),
-			..Default::default()
-		})
-		.await?;
-	Ok(())	
+        .create_collection(&createcollection {
+            collection_name: index.into(),
+            vectors_config: Some(VectorsConfig {
+                config: Some(Config::Params(VectorParams {
+                    size: entry.embedding.len() as u64,
+                    distance: Distance::Cosine.into(),
+                    ..Default::default()
+                })),
+            }),
+            ..Default::default()
+        })
+        .await?;
+    Ok(())  
 }
 
 pub async fn delete_index(index: &str) -> Result<()> { 
-	let client = QdrantClient::from_url("http://localhost:6334").build()?;
-   	client.delete_collection(index).await?;
-	Ok(())
+    let client = QdrantClient::from_url("http://localhost:6334").build()?;
+    client.delete_collection(index).await?;
+    Ok(())
 }

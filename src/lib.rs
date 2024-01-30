@@ -2,9 +2,9 @@ use clap::Parser;
 use std::path::PathBuf;
 
 pub struct Entry {
-	pub id: u8,
-	pub query: String,
-	pub embedding: Vec<f32>,
+    pub id: u8,
+    pub query: String,
+    pub embedding: Vec<f32>,
 }
 
 
@@ -19,7 +19,7 @@ pub struct Args {
     #[arg(long, short = 'q')]
     pub query: Option<String>,
     #[arg(long, short = 'i')]
-	pub index: Option<String>,
+    pub index: Option<String>,
 }
 
 impl Args {
