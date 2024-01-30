@@ -11,22 +11,6 @@ use std::convert::TryInto;
 use rag_rs::Entry;
 
 pub async fn search(entry: Entry, index: &str) -> Result<()> {
-	let client = QdrantClient::from_url("http://localhost:6334").build()?;
-
-    client
-        .create_collection(&CreateCollection {
-            collection_name: index.into(),
-            vectors_config: Some(VectorsConfig {
-                config: Some(Config::Params(VectorParams {
-                    size: entry.embedding.len() as u64,
-                    distance: Distance::Cosine.into(),
-                    ..Default::default()
-                })),
-            }),
-            ..Default::default()
-        })
-        .await?;
-
 	let embedding = entry.embedding.clone();
 	
 	insert(entry, index).await?;
@@ -49,8 +33,8 @@ pub async fn search(entry: Entry, index: &str) -> Result<()> {
 
 pub async fn insert(point: Entry, index: &str) -> Result<()> {
 	let client = QdrantClient::from_url("http://localhost:6334").build()?;
-    let payload: Payload = json!(
-        {
+	let payload: Payload = json!(
+		{
             "query": {
                 "text": point.query
             }
@@ -58,15 +42,34 @@ pub async fn insert(point: Entry, index: &str) -> Result<()> {
     )
 	.try_into()
 	.unwrap();
-    let points = vec![PointStruct::new(1, point.embedding.clone(), payload)];
-    client
-        .upsert_points_blocking(index, None, points, None)
+	let points = vec![PointStruct::new(1, point.embedding.clone(), payload)];
+	client
+		.upsert_points_blocking(index, None, points, None)
         .await?;
 	Ok(())
 }
 
-pub async fn delete(index: &str) -> Result<()> { 
+pub async fn create_index(index: &str) -> Result<()> {
 	let client = QdrantClient::from_url("http://localhost:6334").build()?;
-    client.delete_collection(index).await?;
+
+    client
+		.create_collection(&createcollection {
+			collection_name: index.into(),
+			vectors_config: Some(VectorsConfig {
+				config: Some(Config::Params(VectorParams {
+					size: entry.embedding.len() as u64,
+					distance: Distance::Cosine.into(),
+					..Default::default()
+				})),
+			}),
+			..Default::default()
+		})
+		.await?;
+	Ok(())	
+}
+
+pub async fn delete_index(index: &str) -> Result<()> { 
+	let client = QdrantClient::from_url("http://localhost:6334").build()?;
+   	client.delete_collection(index).await?;
 	Ok(())
 }
