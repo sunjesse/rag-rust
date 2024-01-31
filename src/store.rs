@@ -10,7 +10,7 @@ use std::convert::TryInto;
 
 use rag_rs::Entry;
 
-pub async fn search(entry: Entry, index: &str) -> Result<()> {
+pub async fn search(entry: Entry, index: &str) -> Result<(serde_json::Value)> {
     let client = QdrantClient::from_url("http://localhost:6334").build()?;
     let embedding = entry.embedding.clone();
     
@@ -28,8 +28,9 @@ pub async fn search(entry: Entry, index: &str) -> Result<()> {
         .await?;
     let nearest = neighbours.result.into_iter().next().unwrap();
     let mut payload = nearest.payload;
-    println!("Found {}", payload.remove("query").unwrap().into_json());
-    Ok(())
+	let text = payload.remove("query").unwrap().into_json();
+    println!("Found {}", text);
+    Ok(text)
 }
 
 pub async fn insert(point: Entry, index: &str) -> Result<()> {

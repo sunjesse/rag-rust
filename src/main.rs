@@ -29,9 +29,10 @@ fn main() -> Result<()> {
     };  
 
     let rt = tokio::runtime::Runtime::new().unwrap();
-    rt.block_on(async {
-        store::search(entry, index).await;
+    let result = rt.block_on(async {
+        store::search(entry, index).await
     });
+	let v = result.unwrap().get("text").map_or("not found".to_string(), |tv| tv.to_string());;
+	println!("HIIIII {}", v);
     Ok(())
 }
-
