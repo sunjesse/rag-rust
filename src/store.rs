@@ -28,7 +28,7 @@ pub async fn search(entry: Entry, index: &str) -> Result<()> {
         .await?;
     let nearest = neighbours.result.into_iter().next().unwrap();
     let mut payload = nearest.payload;
-    println!("{}", payload.remove("query").unwrap().into_json());
+    println!("Found {}", payload.remove("query").unwrap().into_json());
     Ok(())
 }
 

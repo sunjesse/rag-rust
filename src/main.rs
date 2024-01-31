@@ -20,7 +20,7 @@ fn main() -> Result<()> {
         .as_deref()
         .unwrap_or("first-index");
     
-    let (query, query_embeddings) = embeddings::load_and_embed(args);
+    let Ok((query, query_embeddings)) = embeddings::load_and_embed(args) else { todo!() };
 
     let entry = Entry {
         id: 1,
