@@ -53,7 +53,7 @@ fn embed_rows(args: Args, batch: Vec<Row>) -> Result<Vec<Pointstruct>{
 				}
 			}
 		)
-		let point = PointStruct::new(i, embd.clone(), payload); 	
+		let point = PointStruct::new(i, e.clone(), payload); 	
 		points.push(point);
 	}
 	Ok(points);
