@@ -24,10 +24,6 @@ fn embed_rows(args: Args, batch: Vec<Row>) -> Result<Vec<Pointstruct>{
 	let source = args.to_tokenizer_source();
     let arch = args.model_architecture;
     let path = args.model_path;
-    let query = args
-        .query
-        .as_deref()
-        .unwrap_or("This is a default query");
     let params = llm::ModelParameters::default();
     let model = llm::load_dynamic(
         Some(arch),
