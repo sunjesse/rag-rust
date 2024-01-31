@@ -21,20 +21,7 @@ pub fn read_rows(&str path) -> Result<Vec<Row>>{
 }
 
 fn embed_rows(args: Args, batch: Vec<Row>) -> Result<Vec<Pointstruct>{
-    let source = args.to_tokenizer_source();
-    let arch = args.model_architecture;
-    let path = args.model_path;
-    let params = llm::ModelParameters::default();
-    let model = llm::load_dynamic(
-        Some(arch),
-        &path,
-        source,
-        params,
-        llm::load_progress_callback_stdout,
-    )
-    .unwrap_or_else(|err| {
-        panic!("Failed to load {arch} model from {path:?}: {err}")
-    });
+    let (model, _) = load(&args)?;
     let infer_params = llm::InferenceParameters::default();
     
     let embd = batch.iter().map(|r| embeddings::get_embeddings(model.as_ref(), &infer_params, r.r2));
