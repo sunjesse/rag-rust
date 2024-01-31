@@ -11,6 +11,7 @@ use std::convert::TryInto;
 use rag_rs::Entry;
 
 pub async fn search(entry: Entry, index: &str) -> Result<()> {
+    let client = QdrantClient::from_url("http://localhost:6334").build()?;
     let embedding = entry.embedding.clone();
     
     insert(entry, index).await?;
@@ -49,15 +50,15 @@ pub async fn insert(point: Entry, index: &str) -> Result<()> {
     Ok(())
 }
 
-pub async fn create_index(index: &str) -> Result<()> {
+pub async fn create_index(index: &str, size: u64) -> Result<()> {
     let client = QdrantClient::from_url("http://localhost:6334").build()?;
 
     client
-        .create_collection(&createcollection {
+        .create_collection(&CreateCollection {
             collection_name: index.into(),
             vectors_config: Some(VectorsConfig {
                 config: Some(Config::Params(VectorParams {
-                    size: entry.embedding.len() as u64,
+                    size: size,
                     distance: Distance::Cosine.into(),
                     ..Default::default()
                 })),
