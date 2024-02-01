@@ -7,6 +7,7 @@ use std::{convert::Infallible, io::Write, path::PathBuf};
 mod utils;
 mod store;
 mod embeddings;
+mod upload;
 
 // TODO:
 //  DONE / need to test 1. index vector db job (upload csv -> llm -> store embeddings)
@@ -20,6 +21,9 @@ fn main() -> Result<()> {
     let index = _index
         .as_deref()
         .unwrap_or("first-index");
+	
+	upload::read_embed_insert(args);	
+	Ok();
 
     let Ok((model, query)) = embeddings::load(&args) else { todo!() };
     let infer_params = llm::InferenceParameters::default();

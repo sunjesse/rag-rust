@@ -14,8 +14,6 @@ pub async fn search(entry: Entry, index: &str) -> Result<(serde_json::Value)> {
     let client = QdrantClient::from_url("http://localhost:6334").build()?;
     let embedding = entry.embedding.clone();
     
-    insert(entry, index).await?;
-
     let neighbours = client
         .search_points(&SearchPoints {
             collection_name: index.into(),
@@ -33,18 +31,8 @@ pub async fn search(entry: Entry, index: &str) -> Result<(serde_json::Value)> {
     Ok(text)
 }
 
-pub async fn insert(point: Entry, index: &str) -> Result<()> {
+pub async fn insert(points: Vec<PointStruct>, index: &str) -> Result<()> {
     let client = QdrantClient::from_url("http://localhost:6334").build()?;
-    let payload: Payload = json!(
-        {
-            "query": {
-                "text": point.query
-            }
-        }
-    )
-    .try_into()
-    .unwrap();
-    let points = vec![PointStruct::new(1, point.embedding.clone(), payload)];
     client
         .upsert_points_blocking(index, None, points, None)
         .await?;

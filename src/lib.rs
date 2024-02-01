@@ -20,6 +20,8 @@ pub struct Args {
     pub query: Option<String>,
     #[arg(long, short = 'i')]
     pub index: Option<String>,
+    #[arg(long, short = 'p')]
+    pub path: Option<String>,
 }
 
 impl Args {

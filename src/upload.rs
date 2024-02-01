@@ -9,7 +9,7 @@ struct Row {
     r2: String,
 }
 
-pub fn read_rows(&str path) -> Result<Vec<Row>>{
+fn read_rows(path: &str) -> Result<Vec<Row>> {
     let mut csv = Reader::from_path(path)?;
     let mut batch = Vec::new(); 
  
@@ -20,7 +20,7 @@ pub fn read_rows(&str path) -> Result<Vec<Row>>{
     Ok(batch)
 }
 
-fn embed_rows(args: Args, batch: Vec<Row>) -> Result<Vec<Pointstruct>{
+fn embed_rows(args: Args, batch: Vec<Row>) -> Result<Vec<PointStruct>{
     let (model, _) = load(&args)?;
     let infer_params = llm::InferenceParameters::default();
     
@@ -35,9 +35,18 @@ fn embed_rows(args: Args, batch: Vec<Row>) -> Result<Vec<Pointstruct>{
                     "1": batch[j].r2, 
                 }
             }
-        )
+        );
         let point = PointStruct::new(i, e.clone(), payload);    
         points.push(point);
     }
-    Ok(points);
+    Ok(points)
 }
+
+pub fn read_embed_insert(args: Args) -> Result<()> {
+	let path = args.path;
+	let index = args.index;
+	let rows = read_rows(path);
+	let embedded = embed_rows(args, rows);
+	embeddings::insert(embedded, index);
+	Ok()
+} 
