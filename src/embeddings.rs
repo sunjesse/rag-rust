@@ -1,4 +1,4 @@
-use rag_rs::Args;
+use crate::utils::Args;
 use llm::Model;
 
 pub fn load(args: &Args) -> Result<(Box<dyn Model>, &str), Box<dyn std::error::Error>>{

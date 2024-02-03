@@ -1,13 +1,12 @@
 use clap::Parser;
 use anyhow::Result;
-use rag_rs::Entry;
-use rag_rs::Args;
+use utils::Entry;
+use utils::Args;
 use std::{convert::Infallible, io::Write, path::PathBuf};
 
 mod utils;
 mod store;
 mod embeddings;
-mod upload;
 
 // TODO:
 //  DONE / need to test 1. index vector db job (upload csv -> llm -> store embeddings)
@@ -22,9 +21,9 @@ fn main() -> Result<()> {
         .as_deref()
         .unwrap_or("first-index");
 	
-	upload::read_embed_insert(args);	
-	Ok();
-
+	store::read_embed_insert(args);	
+	Ok(())
+	/*
     let Ok((model, query)) = embeddings::load(&args) else { todo!() };
     let infer_params = llm::InferenceParameters::default();
     let query_embeddings = embeddings::get_embeddings(model.as_ref(), &infer_params, query);
@@ -41,7 +40,7 @@ fn main() -> Result<()> {
     let result = rt.block_on(async {
         store::search(entry, index).await
     });
-    let v = result.unwrap().get("text").map_or("not found".to_string(), |tv| tv.to_string());;
+    let v = result.unwrap().get("text").map_or("not found".to_string(), |tv| tv.to_string());
     println!("HIIIII {}", v);
     
     let mut session = model.start_session(Default::default());
@@ -70,4 +69,5 @@ fn main() -> Result<()> {
         Err(err) => println!("{err}"),
     }
     Ok(())
+	*/
 }
