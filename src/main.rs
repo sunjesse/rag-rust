@@ -9,10 +9,11 @@ mod store;
 mod embeddings;
 
 // TODO:
-//  DONE / need to test 1. index vector db job (upload csv -> llm -> store embeddings)
+//  DONE 1. index vector db job (upload csv -> llm -> store embeddings)
 //  DONE 2. reformat prompt to use retrieved points
 //  DONE 3. prompt llm
 //  4. move quadrantclient loading to centralized location
+//	5. abstract away csv upload.
 
 fn main() -> Result<()> {
     let args = Args::parse();
@@ -20,16 +21,13 @@ fn main() -> Result<()> {
     let index = _index
         .as_deref()
         .unwrap_or("first-index");
-	
-	store::read_embed_insert(args);	
-	Ok(())
-	/*
+    
+    //store::read_embed_insert(args); 
+
     let Ok((model, query)) = embeddings::load(&args) else { todo!() };
     let infer_params = llm::InferenceParameters::default();
     let query_embeddings = embeddings::get_embeddings(model.as_ref(), &infer_params, query);
     
-    //let Ok((query, query_embeddings)) = embeddings::load_and_embed(args) else { todo!() };
-
     let entry = Entry {
         id: 1,
         query: query.to_string(),
@@ -41,7 +39,6 @@ fn main() -> Result<()> {
         store::search(entry, index).await
     });
     let v = result.unwrap().get("text").map_or("not found".to_string(), |tv| tv.to_string());
-    println!("HIIIII {}", v);
     
     let mut session = model.start_session(Default::default());
     let res = session.infer::<Infallible>(
@@ -65,9 +62,8 @@ fn main() -> Result<()> {
         },
     );
     match res {
-        Ok(result) => println!("HEYYYY: {result}"),
+        Ok(result) => println!("{result}"),
         Err(err) => println!("{err}"),
     }
     Ok(())
-	*/
 }
