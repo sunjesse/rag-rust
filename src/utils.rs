@@ -22,8 +22,7 @@ pub fn form_query(a: &str, b: &str) -> String {
 	return result;
 }
 
-pub struct Entry {
-    pub id: u8,
+pub struct Query {
     pub query: String,
     pub embedding: Vec<f32>,
 }

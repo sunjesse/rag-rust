@@ -25,7 +25,6 @@ pub fn load(args: &Args) -> Result<(Box<dyn Model>, &str), Box<dyn std::error::E
 
 pub fn get_embeddings(
     model: &dyn llm::Model,
-    inference_parameters: &llm::InferenceParameters,
     query: &str,
 ) -> Vec<f32> {
     let mut session = model.start_session(Default::default());
@@ -47,7 +46,6 @@ pub fn get_embeddings(
 
 pub fn load_and_embed(args: Args) -> Result<(String, Vec<f32>), Box<dyn std::error::Error>> {
     let (model, query) = load(&args)?;
-    let infer_params = llm::InferenceParameters::default();
-    let embeddings = get_embeddings(model.as_ref(), &infer_params, query);
+    let embeddings = get_embeddings(model.as_ref(), query);
     Ok((query.to_string(), embeddings))
 }

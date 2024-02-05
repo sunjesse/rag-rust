@@ -1,6 +1,6 @@
 use qdrant_client::prelude::*;
 use llm::Model;
-use crate::utils::Entry;
+use crate::utils::Query;
 use crate::embeddings::{get_embeddings};
 use crate::store::{search};
 use std::{convert::Infallible, io::Write};
@@ -12,12 +12,10 @@ pub struct RAG {
 
 impl RAG {
     pub fn retrieve(&mut self, index: &str, client: &QdrantClient, model: &Box<dyn Model>) -> String {
-        let infer_params = llm::InferenceParameters::default();
-        let query_embeddings = get_embeddings(model.as_ref(), &infer_params, &self.prompt);
-        let entry = Entry {
-            id: 11,
+        let query_embeddings = get_embeddings(model.as_ref(), &self.prompt);
+        let entry = Query {
             query: self.prompt.clone(),
-            embedding:query_embeddings,
+            embedding: query_embeddings,
         };
         let rt = tokio::runtime::Runtime::new().unwrap();
         let result = rt.block_on(async {

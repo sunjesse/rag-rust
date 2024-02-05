@@ -2,16 +2,15 @@ use anyhow::Result;
 use qdrant_client::prelude::*;
 use qdrant_client::qdrant::vectors_config::Config;
 use qdrant_client::qdrant::{
-    Condition, CreateCollection, Filter, SearchPoints, VectorParams, VectorsConfig,
+    CreateCollection, SearchPoints, VectorParams, VectorsConfig,
 };
-use serde_json::{json, Value};
-use std::collections::HashMap;
+use serde_json::json;
 use std::convert::TryInto;
 use std::path::PathBuf;
 use serde::Deserialize;
-use csv::{Reader, ReaderBuilder};
+use csv::ReaderBuilder;
 
-use crate::utils::{Entry, Args};
+use crate::utils::{Query, Args};
 use crate::embeddings::{load, get_embeddings};
 
 #[derive(Debug, Deserialize)]
@@ -21,7 +20,7 @@ struct Row {
     r3: String,
 }
 
-pub async fn search(entry: Entry, index: &str, client: &QdrantClient) -> Result<(serde_json::Value)> {
+pub async fn search(entry: Query, index: &str, client: &QdrantClient) -> Result<serde_json::Value> {
     let embedding = entry.embedding.clone();
     
     let neighbours = client
@@ -72,18 +71,6 @@ pub async fn delete_index(index: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn read_embed_insert(args: Args, client: &QdrantClient) -> Result<()> {
-    let path = args.path.clone().unwrap();
-    let index = args.index.clone().unwrap();
-    let rows = read_rows(&path);
-    let embedded = embed_rows(args, rows?);
-    
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        insert(embedded?, &index, client).await
-    });
-    Ok(())
-} 
 
 fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
     let mut csv = ReaderBuilder::new().has_headers(false).from_path(path)?;
@@ -106,9 +93,7 @@ fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
 
 fn embed_rows(args: Args, batch: Vec<Row>) -> Result<Vec<PointStruct>>{
     let Ok((model, _)) = load(&args) else { todo!() };
-    let infer_params = llm::InferenceParameters::default();
-    
-    let embd = batch.iter().map(|r| get_embeddings(model.as_ref(), &infer_params, &r.r2));
+    let embd = batch.iter().map(|r| get_embeddings(model.as_ref(), &r.r2));
     let mut points = Vec::new();
     let mut i = 0;
     for (j, em) in embd.enumerate() {
@@ -128,3 +113,16 @@ fn embed_rows(args: Args, batch: Vec<Row>) -> Result<Vec<PointStruct>>{
     }
     Ok(points)
 }
+
+pub fn read_embed_insert(args: Args, client: &QdrantClient) -> Result<()> {
+    let path = args.path.clone().unwrap();
+    let index = args.index.clone().unwrap();
+    let rows = read_rows(&path);
+    let embedded = embed_rows(args, rows?);
+    
+    let rt = tokio::runtime::Runtime::new().unwrap();
+    let _ = rt.block_on(async {
+        insert(embedded?, &index, client).await
+    });
+    Ok(())
+} 

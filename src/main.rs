@@ -2,7 +2,6 @@ use clap::Parser;
 use anyhow::Result;
 use utils::Args;
 use qdrant_client::prelude::*;
-use std::{io::Write, path::PathBuf};
 
 mod utils;
 mod store;
@@ -22,7 +21,7 @@ fn main() -> Result<()> {
     let Ok((model, query)) = embeddings::load(&args) else { todo!() };
     let reprompt = "Tell me what genre the following movie with description is about: _RETRIEVED_";
     let mut pipe = pipeline::RAG { prompt: query.to_string(), reprompt: reprompt.to_string() };
-    let v = pipe.retrieve(&index, &client, &model);
-    pipe.prompt(&model);
+    let _ = pipe.retrieve(&index, &client, &model);
+	let _ = pipe.prompt(&model);
     Ok(())
 }
