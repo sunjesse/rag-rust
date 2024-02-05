@@ -21,8 +21,7 @@ struct Row {
     r3: String,
 }
 
-pub async fn search(entry: Entry, index: &str) -> Result<(serde_json::Value)> {
-    let client = QdrantClient::from_url("http://localhost:6334").build()?;
+pub async fn search(entry: Entry, index: &str, client: &QdrantClient) -> Result<(serde_json::Value)> {
     let embedding = entry.embedding.clone();
     
     let neighbours = client
@@ -37,23 +36,20 @@ pub async fn search(entry: Entry, index: &str) -> Result<(serde_json::Value)> {
         .await?;
     let nearest = neighbours.result.into_iter().next().unwrap();
     let mut payload = nearest.payload;
-    let text = payload.remove("query").unwrap().into_json();
+	println!("{:?}", payload);
+    let text = payload.remove("metadata").unwrap().into_json();
     println!("Found {}", text);
     Ok(text)
 }
 
-pub async fn insert(points: Vec<PointStruct>, index: &str) -> Result<()> {
-    println!("Queueing up insert...");
-    let client = QdrantClient::from_url("http://localhost:6334").build()?;
+pub async fn insert(points: Vec<PointStruct>, index: &str, client: &QdrantClient) -> Result<()> {
     client
         .upsert_points_blocking(index, None, points, None)
         .await?;
     Ok(())
 }
 
-pub async fn create_index(index: &str, size: u64) -> Result<()> {
-    let client = QdrantClient::from_url("http://localhost:6334").build()?;
-
+pub async fn create_index(index: &str, size: u64, client: &QdrantClient) -> Result<()> {
     client
         .create_collection(&CreateCollection {
             collection_name: index.into(),
@@ -76,7 +72,7 @@ pub async fn delete_index(index: &str) -> Result<()> {
     Ok(())
 }
 
-pub fn read_embed_insert(args: Args) -> Result<()> {
+pub fn read_embed_insert(args: Args, client: &QdrantClient) -> Result<()> {
     let path = args.path.clone().unwrap();
     let index = args.index.clone().unwrap();
     let rows = read_rows(&path);
@@ -84,15 +80,14 @@ pub fn read_embed_insert(args: Args) -> Result<()> {
     
     let rt = tokio::runtime::Runtime::new().unwrap();
     let result = rt.block_on(async {
-        insert(embedded?, &index).await
+        insert(embedded?, &index, client).await
     });
     Ok(())
 } 
 
-pub fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
+fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
     let mut csv = ReaderBuilder::new().has_headers(false).from_path(path)?;
     let mut batch = Vec::new(); 
-    println!("{}", path.display());
 
     for row in csv.deserialize() {
         match row {
@@ -109,7 +104,7 @@ pub fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
     Ok(batch)
 }
 
-pub fn embed_rows(args: Args, batch: Vec<Row>) -> Result<Vec<PointStruct>>{
+fn embed_rows(args: Args, batch: Vec<Row>) -> Result<Vec<PointStruct>>{
     let Ok((model, _)) = load(&args) else { todo!() };
     let infer_params = llm::InferenceParameters::default();
     

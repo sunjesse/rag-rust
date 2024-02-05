@@ -2,11 +2,13 @@ use clap::Parser;
 use anyhow::Result;
 use utils::Entry;
 use utils::Args;
-use std::{convert::Infallible, io::Write, path::PathBuf};
+use qdrant_client::prelude::*;
+use std::{io::Write, path::PathBuf};
 
 mod utils;
 mod store;
 mod embeddings;
+mod pipeline;
 
 // TODO:
 //  DONE 1. index vector db job (upload csv -> llm -> store embeddings)
@@ -21,49 +23,15 @@ fn main() -> Result<()> {
     let index = _index
         .as_deref()
         .unwrap_or("first-index");
-    
-    //store::read_embed_insert(args); 
+
+	let client = QdrantClient::from_url("http://localhost:6334").build()?;
+    //store::read_embed_insert(args, &client); 
 
     let Ok((model, query)) = embeddings::load(&args) else { todo!() };
-    let infer_params = llm::InferenceParameters::default();
-    let query_embeddings = embeddings::get_embeddings(model.as_ref(), &infer_params, query);
-    
-    let entry = Entry {
-        id: 1,
-        query: query.to_string(),
-        embedding: query_embeddings,
-    };  
-
-    let rt = tokio::runtime::Runtime::new().unwrap();
-    let result = rt.block_on(async {
-        store::search(entry, index).await
-    });
-    let v = result.unwrap().get("text").map_or("not found".to_string(), |tv| tv.to_string());
-    
-    let mut session = model.start_session(Default::default());
-    let res = session.infer::<Infallible>(
-        model.as_ref(),
-        &mut rand::thread_rng(),
-        &llm::InferenceRequest {
-            prompt: (&v).into(),
-            parameters: &llm::InferenceParameters::default(),
-            play_back_previous_tokens: false,
-            maximum_token_count: None,
-        },
-        &mut Default::default(),
-        |r| match r {
-            llm::InferenceResponse::PromptToken(t) | llm::InferenceResponse::InferredToken(t) => {
-                print!("{t}");
-                std::io::stdout().flush().unwrap();
-
-                Ok(llm::InferenceFeedback::Continue)
-            }
-            _ => Ok(llm::InferenceFeedback::Continue),
-        },
-    );
-    match res {
-        Ok(result) => println!("{result}"),
-        Err(err) => println!("{err}"),
-    }
+	let rag = pipeline::RAG { prompt: query.to_string() };
+	let v = rag.retrieve(&index, &client, &model);
+	let reprompt = utils::form_query("Tell me something about a movie with description: ", &v);
+	println!("{:?}", reprompt);
+	rag.prompt(&reprompt, &model);
     Ok(())
 }

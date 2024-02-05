@@ -17,6 +17,11 @@ pub fn magnitude(v: &[f32]) -> f32 {
     v.iter().map(|&x| x * x).sum::<f32>().sqrt()
 }
 
+pub fn form_query(a: &str, b: &str) -> String {
+	let result = [a, b].join("\n");
+	return result;
+}
+
 pub struct Entry {
     pub id: u8,
     pub query: String,
