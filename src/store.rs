@@ -36,7 +36,7 @@ pub async fn search(entry: Entry, index: &str, client: &QdrantClient) -> Result<
         .await?;
     let nearest = neighbours.result.into_iter().next().unwrap();
     let mut payload = nearest.payload;
-	println!("{:?}", payload);
+    println!("{:?}", payload);
     let text = payload.remove("metadata").unwrap().into_json();
     println!("Found {}", text);
     Ok(text)
