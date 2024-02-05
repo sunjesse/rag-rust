@@ -7,10 +7,11 @@ use std::{convert::Infallible, io::Write};
 
 pub struct RAG {
 	pub prompt: String,
+	pub reprompt: String,
 }
 
 impl RAG {
-	pub fn retrieve(&self, index: &str, client: &QdrantClient, model: &Box<dyn Model>) -> String {
+	pub fn retrieve(&mut self, index: &str, client: &QdrantClient, model: &Box<dyn Model>) -> String {
 		let infer_params = llm::InferenceParameters::default();
 		let query_embeddings = get_embeddings(model.as_ref(), &infer_params, &self.prompt);
 		let entry = Entry {
@@ -23,16 +24,18 @@ impl RAG {
 			search(entry, index, client).await
 		});
 		let v = result.unwrap().get("description").map_or("not found".to_string(), |tv| tv.to_string());
+		self.reprompt = self.reprompt.replace("_RETRIEVED_", &v); 		
+		println!("{:?}", self.reprompt);
 		return v;
 	}
 
-	pub fn prompt(&self, query: &str, model: &Box<dyn Model>) -> Result<(), Box<dyn std::error::Error>> {
+	pub fn prompt(&self, model: &Box<dyn Model>) -> Result<(), Box<dyn std::error::Error>> {
 		let mut session = model.start_session(Default::default());
 		let res = session.infer::<Infallible>(
 			model.as_ref(),
 			&mut rand::thread_rng(),
 			&llm::InferenceRequest {
-				prompt: query.into(),
+				prompt: (&self.reprompt).into(),
 				parameters: &llm::InferenceParameters::default(),
 				play_back_previous_tokens: false,
 				maximum_token_count: None,
