@@ -40,7 +40,7 @@ impl Store {
 
         let neighbours = self.client
             .search_points(&SearchPoints {
-            	collection_name: index.into(),
+                collection_name: index.into(),
                 vector: embedding,
                 //filter: Some(Filter::all([Condition::matches("id", entry.id)])),
                 limit: 10,
@@ -65,16 +65,16 @@ impl Store {
 
     pub async fn create_index(&self, index: &str, size: u64) -> Result<()> {
         self.client
-        	.create_collection(&CreateCollection {
-				collection_name: index.into(),
-				vectors_config: Some(VectorsConfig {
-					config: Some(Config::Params(VectorParams {
-						size: size,
-						distance: Distance::Cosine.into(),
-						..Default::default()
-				})),
-			}),
-			..Default::default()
+            .create_collection(&CreateCollection {
+                collection_name: index.into(),
+                vectors_config: Some(VectorsConfig {
+                    config: Some(Config::Params(VectorParams {
+                        size: size,
+                        distance: Distance::Cosine.into(),
+                        ..Default::default()
+                })),
+            }),
+            ..Default::default()
         })
         .await?;
         Ok(())  
