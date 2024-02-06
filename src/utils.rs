@@ -6,7 +6,6 @@ pub struct Query {
     pub embedding: Vec<f32>,
 }
 
-
 #[derive(Parser)]
 pub struct Args {
     pub model_architecture: llm::ModelArchitecture,

@@ -40,12 +40,12 @@ impl Store {
 
         let neighbours = self.client
             .search_points(&SearchPoints {
-                    collection_name: index.into(),
-                    vector: embedding,
-                    //filter: Some(Filter::all([Condition::matches("id", entry.id)])),
-                    limit: 10,
-                    with_payload: Some(true.into()),
-                    ..Default::default()
+            	collection_name: index.into(),
+                vector: embedding,
+                //filter: Some(Filter::all([Condition::matches("id", entry.id)])),
+                limit: 10,
+                with_payload: Some(true.into()),
+                ..Default::default()
             })
             .await?;
         let nearest = neighbours.result.into_iter().next().unwrap();
@@ -65,18 +65,18 @@ impl Store {
 
     pub async fn create_index(&self, index: &str, size: u64) -> Result<()> {
         self.client
-            .create_collection(&CreateCollection {
-                    collection_name: index.into(),
-                    vectors_config: Some(VectorsConfig {
-                            config: Some(Config::Params(VectorParams {
-                                    size: size,
-                                    distance: Distance::Cosine.into(),
-                                    ..Default::default()
-                            })),
-                    }),
-                    ..Default::default()
-            })
-            .await?;
+        	.create_collection(&CreateCollection {
+				collection_name: index.into(),
+				vectors_config: Some(VectorsConfig {
+					config: Some(Config::Params(VectorParams {
+						size: size,
+						distance: Distance::Cosine.into(),
+						..Default::default()
+				})),
+			}),
+			..Default::default()
+        })
+        .await?;
         Ok(())  
     }
 
@@ -86,7 +86,6 @@ impl Store {
     }
     
 }
-
 
 
 fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
