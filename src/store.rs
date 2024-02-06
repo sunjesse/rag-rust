@@ -35,57 +35,57 @@ impl Store {
         })
     }
         
-	pub async fn search(&self, entry: Query, index: &str) -> Result<serde_json::Value> {
-		let embedding = entry.embedding.clone();
+    pub async fn search(&self, entry: Query, index: &str) -> Result<serde_json::Value> {
+        let embedding = entry.embedding.clone();
 
-		let neighbours = self.client
-			.search_points(&SearchPoints {
-					collection_name: index.into(),
-					vector: embedding,
-					//filter: Some(Filter::all([Condition::matches("id", entry.id)])),
-					limit: 10,
-					with_payload: Some(true.into()),
-					..Default::default()
-			})
-			.await?;
-		let nearest = neighbours.result.into_iter().next().unwrap();
-		let mut payload = nearest.payload;
-		println!("{:?}", payload);
-		let text = payload.remove("metadata").unwrap().into_json();
-		println!("Found {}", text);
-		Ok(text)
-	}
+        let neighbours = self.client
+            .search_points(&SearchPoints {
+                    collection_name: index.into(),
+                    vector: embedding,
+                    //filter: Some(Filter::all([Condition::matches("id", entry.id)])),
+                    limit: 10,
+                    with_payload: Some(true.into()),
+                    ..Default::default()
+            })
+            .await?;
+        let nearest = neighbours.result.into_iter().next().unwrap();
+        let mut payload = nearest.payload;
+        println!("{:?}", payload);
+        let text = payload.remove("metadata").unwrap().into_json();
+        println!("Found {}", text);
+        Ok(text)
+    }
 
-	pub async fn insert(&self, points: Vec<PointStruct>, index: &str) -> Result<()> {
-		self.client
-			.upsert_points_blocking(index, None, points, None)
-			.await?;
-		Ok(())
-	}
+    pub async fn insert(&self, points: Vec<PointStruct>, index: &str) -> Result<()> {
+        self.client
+            .upsert_points_blocking(index, None, points, None)
+            .await?;
+        Ok(())
+    }
 
-	pub async fn create_index(&self, index: &str, size: u64) -> Result<()> {
-		self.client
-			.create_collection(&CreateCollection {
-					collection_name: index.into(),
-					vectors_config: Some(VectorsConfig {
-							config: Some(Config::Params(VectorParams {
-									size: size,
-									distance: Distance::Cosine.into(),
-									..Default::default()
-							})),
-					}),
-					..Default::default()
-			})
-			.await?;
-		Ok(())  
-	}
+    pub async fn create_index(&self, index: &str, size: u64) -> Result<()> {
+        self.client
+            .create_collection(&CreateCollection {
+                    collection_name: index.into(),
+                    vectors_config: Some(VectorsConfig {
+                            config: Some(Config::Params(VectorParams {
+                                    size: size,
+                                    distance: Distance::Cosine.into(),
+                                    ..Default::default()
+                            })),
+                    }),
+                    ..Default::default()
+            })
+            .await?;
+        Ok(())  
+    }
 
-	pub async fn delete_index(index: &str) -> Result<()> { 
-		let client = QdrantClient::from_url("http://localhost:6334").build()?;
-		client.delete_collection(index).await?;
-		Ok(())
-	}
-	
+    pub async fn delete_index(index: &str) -> Result<()> { 
+        let client = QdrantClient::from_url("http://localhost:6334").build()?;
+        client.delete_collection(index).await?;
+        Ok(())
+    }
+    
 }
 
 
