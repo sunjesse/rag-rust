@@ -2,7 +2,7 @@ use qdrant_client::prelude::*;
 use llm::Model;
 use crate::utils::Query;
 use crate::embeddings::{get_embeddings};
-use crate::store::{search};
+use crate::store::{Store};
 use std::{convert::Infallible, io::Write};
 
 pub struct RAG {
@@ -11,7 +11,7 @@ pub struct RAG {
 }
 
 impl RAG {
-    pub fn retrieve(&mut self, index: &str, client: &QdrantClient, model: &Box<dyn Model>) -> String {
+    pub fn retrieve(&mut self, index: &str, client: &Store, model: &Box<dyn Model>) -> String {
         let query_embeddings = get_embeddings(model.as_ref(), &self.prompt);
         let entry = Query {
             query: self.prompt.clone(),
@@ -19,7 +19,7 @@ impl RAG {
         };
         let rt = tokio::runtime::Runtime::new().unwrap();
         let result = rt.block_on(async {
-            search(entry, index, client).await
+            client.search(entry, index).await
         });
         let v = result.unwrap().get("description").map_or("not found".to_string(), |tv| tv.to_string());
         self.reprompt = self.reprompt.replace("_RETRIEVED_", &v);       

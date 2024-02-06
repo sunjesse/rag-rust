@@ -15,7 +15,7 @@ fn main() -> Result<()> {
         .as_deref()
         .unwrap_or("first-index");
 
-    let client = QdrantClient::from_url("http://localhost:6334").build()?;
+    let client = store::Store::new("http://localhost:6334").unwrap();
     //store::read_embed_insert(args, &client); 
 
     let Ok((model, query)) = embeddings::load(&args) else { todo!() };

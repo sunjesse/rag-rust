@@ -20,56 +20,74 @@ struct Row {
     r3: String,
 }
 
-pub async fn search(entry: Query, index: &str, client: &QdrantClient) -> Result<serde_json::Value> {
-    let embedding = entry.embedding.clone();
-    
-    let neighbours = client
-        .search_points(&SearchPoints {
-            collection_name: index.into(),
-            vector: embedding,
-            //filter: Some(Filter::all([Condition::matches("id", entry.id)])),
-            limit: 10,
-            with_payload: Some(true.into()),
-            ..Default::default()
+pub struct Store {
+    pub url: String,
+    pub client:  QdrantClient,
+}
+
+impl Store {
+    pub fn new(store_url: &str) -> Result<Self>{
+        let url: String = store_url.to_string();
+        let client: QdrantClient = QdrantClient::from_url(store_url).build()?;
+        Ok(Self{
+            url: url,
+            client: client,
         })
-        .await?;
-    let nearest = neighbours.result.into_iter().next().unwrap();
-    let mut payload = nearest.payload;
-    println!("{:?}", payload);
-    let text = payload.remove("metadata").unwrap().into_json();
-    println!("Found {}", text);
-    Ok(text)
+    }
+        
+	pub async fn search(&self, entry: Query, index: &str) -> Result<serde_json::Value> {
+		let embedding = entry.embedding.clone();
+
+		let neighbours = self.client
+			.search_points(&SearchPoints {
+					collection_name: index.into(),
+					vector: embedding,
+					//filter: Some(Filter::all([Condition::matches("id", entry.id)])),
+					limit: 10,
+					with_payload: Some(true.into()),
+					..Default::default()
+			})
+			.await?;
+		let nearest = neighbours.result.into_iter().next().unwrap();
+		let mut payload = nearest.payload;
+		println!("{:?}", payload);
+		let text = payload.remove("metadata").unwrap().into_json();
+		println!("Found {}", text);
+		Ok(text)
+	}
+
+	pub async fn insert(&self, points: Vec<PointStruct>, index: &str) -> Result<()> {
+		self.client
+			.upsert_points_blocking(index, None, points, None)
+			.await?;
+		Ok(())
+	}
+
+	pub async fn create_index(&self, index: &str, size: u64) -> Result<()> {
+		self.client
+			.create_collection(&CreateCollection {
+					collection_name: index.into(),
+					vectors_config: Some(VectorsConfig {
+							config: Some(Config::Params(VectorParams {
+									size: size,
+									distance: Distance::Cosine.into(),
+									..Default::default()
+							})),
+					}),
+					..Default::default()
+			})
+			.await?;
+		Ok(())  
+	}
+
+	pub async fn delete_index(index: &str) -> Result<()> { 
+		let client = QdrantClient::from_url("http://localhost:6334").build()?;
+		client.delete_collection(index).await?;
+		Ok(())
+	}
+	
 }
 
-pub async fn insert(points: Vec<PointStruct>, index: &str, client: &QdrantClient) -> Result<()> {
-    client
-        .upsert_points_blocking(index, None, points, None)
-        .await?;
-    Ok(())
-}
-
-pub async fn create_index(index: &str, size: u64, client: &QdrantClient) -> Result<()> {
-    client
-        .create_collection(&CreateCollection {
-            collection_name: index.into(),
-            vectors_config: Some(VectorsConfig {
-                config: Some(Config::Params(VectorParams {
-                    size: size,
-                    distance: Distance::Cosine.into(),
-                    ..Default::default()
-                })),
-            }),
-            ..Default::default()
-        })
-        .await?;
-    Ok(())  
-}
-
-pub async fn delete_index(index: &str) -> Result<()> { 
-    let client = QdrantClient::from_url("http://localhost:6334").build()?;
-    client.delete_collection(index).await?;
-    Ok(())
-}
 
 
 fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
@@ -114,7 +132,7 @@ fn embed_rows(args: Args, batch: Vec<Row>) -> Result<Vec<PointStruct>>{
     Ok(points)
 }
 
-pub fn read_embed_insert(args: Args, client: &QdrantClient) -> Result<()> {
+pub fn read_embed_insert(args: Args, client: &Store) -> Result<()> {
     let path = args.path.clone().unwrap();
     let index = args.index.clone().unwrap();
     let rows = read_rows(&path);
@@ -122,7 +140,7 @@ pub fn read_embed_insert(args: Args, client: &QdrantClient) -> Result<()> {
     
     let rt = tokio::runtime::Runtime::new().unwrap();
     let _ = rt.block_on(async {
-        insert(embedded?, &index, client).await
+        client.insert(embedded?, &index).await
     });
     Ok(())
 } 
