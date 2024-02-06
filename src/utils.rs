@@ -21,6 +21,8 @@ pub struct Args {
     pub index: Option<String>,
     #[arg(long, short = 'p')]
     pub path: Option<PathBuf>,
+    #[arg(long)]
+	pub rp_path: Option<PathBuf>,	
 }
 
 impl Args {
