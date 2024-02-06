@@ -80,9 +80,8 @@ impl Store {
         Ok(())  
     }
 
-    pub async fn delete_index(index: &str) -> Result<()> { 
-        let client = QdrantClient::from_url("http://localhost:6334").build()?;
-        client.delete_collection(index).await?;
+    pub async fn delete_index(&self, index: &str) -> Result<()> { 
+        self.client.delete_collection(index).await?;
         Ok(())
     }
     

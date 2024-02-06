@@ -1,4 +1,3 @@
-use qdrant_client::prelude::*;
 use llm::Model;
 use crate::utils::Query;
 use crate::embeddings::{get_embeddings};

@@ -1,7 +1,6 @@
 use clap::Parser;
 use anyhow::Result;
 use utils::Args;
-use qdrant_client::prelude::*;
 
 mod utils;
 mod store;
