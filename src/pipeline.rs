@@ -54,11 +54,11 @@ impl RAG {
         }
         Ok(())
     }
-	
-	pub fn run(&mut self, index: &str, client: &Store, model: &Box<dyn Model>) -> Result<(), Box<dyn std::error::Error>>{
-		let _ = self.retrieve(index, client, model);
-		let _ = self.prompt(model);
-		Ok(())	
-	}
+    
+    pub fn run(&mut self, index: &str, client: &Store, model: &Box<dyn Model>) -> Result<(), Box<dyn std::error::Error>>{
+        let _ = self.retrieve(index, client, model);
+        let _ = self.prompt(model);
+        Ok(())  
+    }
 
 }
