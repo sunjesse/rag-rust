@@ -25,9 +25,7 @@ fn main() -> Result<()> {
 
     let Ok((model, query)) = embeddings::load(&args) else { todo!() };
     let reprompt = fs::read_to_string(reprompt_path).unwrap();
-    println!("REPROMPT {:?}", reprompt);
     let mut pipe = pipeline::RAG { prompt: query.to_string(), reprompt: reprompt.to_string() };
-    let _ = pipe.retrieve(&index, &client, &model);
-    let _ = pipe.prompt(&model);
+    let _ = pipe.run(&index, &client, &model);
     Ok(())
 }

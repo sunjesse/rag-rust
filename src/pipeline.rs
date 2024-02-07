@@ -21,7 +21,7 @@ impl RAG {
             client.search(entry, index).await
         });
         let v = result.unwrap().get("description").map_or("not found".to_string(), |tv| tv.to_string());
-        self.reprompt = self.reprompt.replace("_RETRIEVED_", &v);       
+        self.reprompt = self.reprompt.replace("_RETRIEVED_", &v).replace("_QUERY_", &self.prompt);       
         println!("{:?}", self.reprompt);
         return v;
     }
@@ -54,5 +54,11 @@ impl RAG {
         }
         Ok(())
     }
+	
+	pub fn run(&mut self, index: &str, client: &Store, model: &Box<dyn Model>) -> Result<(), Box<dyn std::error::Error>>{
+		let _ = self.retrieve(index, client, model);
+		let _ = self.prompt(model);
+		Ok(())	
+	}
 
 }
