@@ -12,8 +12,8 @@ mod pipeline;
 fn main() -> Result<()> {
     let args = Args::parse();
     let index = (&args.index)
-		.as_deref()
-		.unwrap_or("first-index");
+        .as_deref()
+        .unwrap_or("first-index");
     let reprompt_path = (&args.rp_path)
         .as_deref()
         .unwrap_or(Path::new("./src/prompts/reprompt/reprompt.txt"));
