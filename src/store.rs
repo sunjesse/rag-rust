@@ -56,11 +56,10 @@ impl Store {
         Ok(text)
     }
 
-    pub async fn insert(&self, points: Vec<PointStruct>, index: &str) -> Result<()> {
+    pub async fn insert(&self, points: Vec<PointStruct>, index: &str, size: u64) -> Result<()> {
         println!("Inserting {} points into index '{}'...", points.len(), index);
         if self.has_index(index).await? == false {
-			// TODO: Un-hardcode the size.
-            self.create_index(index, 2560).await;
+            self.create_index(index, size).await;
         }
 
         self.client
@@ -123,11 +122,12 @@ fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
     Ok(batch)
 }
 
-fn embed_rows(args: &Args, batch: Vec<Row>) -> Result<Vec<PointStruct>>{
+fn embed_rows(args: &Args, batch: Vec<Row>) -> Result<(Vec<PointStruct>, u64)>{
     let Ok((model, _)) = load(args) else { todo!() };
     let embd = batch.iter().map(|r| get_embeddings(model.as_ref(), &r.r2));
     let mut points = Vec::new();
     let mut i = 0;
+    let mut dim = 0;
     for (j, em) in embd.enumerate() {
         let payload: Payload = json!(
             {
@@ -142,18 +142,21 @@ fn embed_rows(args: &Args, batch: Vec<Row>) -> Result<Vec<PointStruct>>{
         let point = PointStruct::new(i, em.clone(), payload);    
         i += 1;
         points.push(point);
+        if dim == 0 {
+            dim = em.len();
+        }
     }
-    Ok(points)
+    Ok((points, dim.try_into().unwrap()))
 }
 
 pub fn read_embed_insert(args: &Args, client: &Store, index: &str) -> Result<()> {
     let path = args.path.clone().unwrap();
     let rows = read_rows(&path);
-    let embedded = embed_rows(args, rows?);
+    let Ok((embedded, size)) = embed_rows(args, rows?) else { todo!() };
     
     let rt = tokio::runtime::Runtime::new().unwrap();
     let _ = rt.block_on(async {
-        client.insert(embedded?, index).await
+        client.insert(embedded, index, size).await
     });
     Ok(())
 } 
