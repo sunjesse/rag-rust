@@ -65,6 +65,7 @@ impl Store {
         self.client
             .upsert_points_blocking(index, None, points, None)
             .await?;
+        println!("Done inserting {} points into index '{}'...", points.len(), index);
         Ok(())
     }
 
@@ -142,9 +143,7 @@ fn embed_rows(args: &Args, batch: Vec<Row>) -> Result<(Vec<PointStruct>, u64)>{
         let point = PointStruct::new(i, em.clone(), payload);    
         i += 1;
         points.push(point);
-        if dim == 0 {
-            dim = em.len();
-        }
+        dim = if dim == 0 { em.len() } else { dim };
     }
     Ok((points, dim.try_into().unwrap()))
 }
