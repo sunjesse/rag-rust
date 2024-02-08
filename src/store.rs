@@ -59,6 +59,7 @@ impl Store {
     pub async fn insert(&self, points: Vec<PointStruct>, index: &str) -> Result<()> {
         println!("Inserting {} points into index '{}'...", points.len(), index);
         if self.has_index(index).await? == false {
+			// TODO: Un-hardcode the size.
             self.create_index(index, 2560).await;
         }
 
