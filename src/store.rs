@@ -57,10 +57,10 @@ impl Store {
     }
 
     pub async fn insert(&self, points: Vec<PointStruct>, index: &str) -> Result<()> {
-		println!("Inserting {} points into index '{}'...", points.len(), index);
-		if self.has_index(index).await? == false {
-			self.create_index(index, 2560).await;
-		}
+        println!("Inserting {} points into index '{}'...", points.len(), index);
+        if self.has_index(index).await? == false {
+            self.create_index(index, 2560).await;
+        }
 
         self.client
             .upsert_points_blocking(index, None, points, None)
@@ -89,16 +89,16 @@ impl Store {
         self.client.delete_collection(index).await?;
         Ok(())
     }
-	
-	async fn has_index(&self, index: &str) -> Result<bool> {
-		let list = self.client.list_collections().await?;
-		for c in list.collections.iter() {
-			if c.name == index {
-				return Ok(true);
-			}	
-		}
-		Ok(false)
-	}
+    
+    async fn has_index(&self, index: &str) -> Result<bool> {
+        let list = self.client.list_collections().await?;
+        for c in list.collections.iter() {
+            if c.name == index {
+                return Ok(true);
+            }   
+        }
+        Ok(false)
+    }
     
 }
 
