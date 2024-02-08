@@ -19,7 +19,7 @@ fn main() -> Result<()> {
         .unwrap_or(Path::new("./src/prompts/reprompt/reprompt.txt"));
 
     let client = store::Store::new("http://localhost:6334").unwrap();
-    let _ = store::read_embed_insert(&args, &client, index); 
+    //let _ = store::read_embed_insert(&args, &client, index); 
 
     let Ok((model, query)) = embeddings::load(&args) else { todo!() };
     let reprompt = fs::read_to_string(reprompt_path).unwrap();

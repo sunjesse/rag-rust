@@ -59,7 +59,7 @@ impl Store {
     pub async fn insert(&self, points: Vec<PointStruct>, index: &str, size: u64) -> Result<()> {
         println!("Inserting {} points into index '{}'...", points.len(), index);
         if self.has_index(index).await? == false {
-            self.create_index(index, size).await;
+            let _ = self.create_index(index, size).await;
         }
 
         self.client
