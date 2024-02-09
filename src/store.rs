@@ -9,9 +9,10 @@ use std::convert::TryInto;
 use std::path::PathBuf;
 use serde::Deserialize;
 use csv::ReaderBuilder;
+use llm::Model;
 
 use crate::utils::{Query, Args};
-use crate::embeddings::{load, get_embeddings};
+use crate::embeddings::get_embeddings;
 
 #[derive(Debug, Deserialize)]
 struct Row {
@@ -65,7 +66,7 @@ impl Store {
         self.client
             .upsert_points_blocking(index, None, points, None)
             .await?;
-        println!("Done inserting {} points into index '{}'...", points.len(), index);
+        println!("Completed inserted points");
         Ok(())
     }
 
@@ -123,8 +124,7 @@ fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
     Ok(batch)
 }
 
-fn embed_rows(args: &Args, batch: Vec<Row>) -> Result<(Vec<PointStruct>, u64)>{
-    let Ok((model, _)) = load(args) else { todo!() };
+fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<(Vec<PointStruct>, u64)>{
     let embd = batch.iter().map(|r| get_embeddings(model.as_ref(), &r.r2));
     let mut points = Vec::new();
     let mut i = 0;
@@ -148,10 +148,10 @@ fn embed_rows(args: &Args, batch: Vec<Row>) -> Result<(Vec<PointStruct>, u64)>{
     Ok((points, dim.try_into().unwrap()))
 }
 
-pub fn read_embed_insert(args: &Args, client: &Store, index: &str) -> Result<()> {
+pub fn read_embed_insert(args: &Args, client: &Store, index: &str, model: &Box<dyn Model>) -> Result<()> {
     let path = args.path.clone().unwrap();
     let rows = read_rows(&path);
-    let Ok((embedded, size)) = embed_rows(args, rows?) else { todo!() };
+    let Ok((embedded, size)) = embed_rows(rows?, model) else { todo!() };
     
     let rt = tokio::runtime::Runtime::new().unwrap();
     let _ = rt.block_on(async {
