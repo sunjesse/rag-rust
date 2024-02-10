@@ -59,7 +59,7 @@ impl Store {
 
     pub async fn insert(&self, points: Vec<PointStruct>, index: &str, size: u64) -> Result<()> {
         println!("Inserting {} points into index '{}'...", points.len(), index);
-        if self.has_index(index).await? == false {
+        if !(self.has_index(index).await?) {
             let _ = self.create_index(index, size).await;
         }
 
@@ -127,21 +127,19 @@ fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
 fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<(Vec<PointStruct>, u64)>{
     let embd = batch.iter().map(|r| get_embeddings(model.as_ref(), &r.r2));
     let mut points = Vec::new();
-    let mut i = 0;
     let mut dim = 0;
-    for (j, em) in embd.enumerate() {
+    for (i, em) in embd.enumerate() {
         let payload: Payload = json!(
             {
                 "metadata": {
-                    "title": batch[j].r1,
-                    "description": batch[j].r3, 
+                    "title": batch[i].r1,
+                    "description": batch[i].r3, 
                 }
             }
         )
         .try_into()
         .unwrap();
-        let point = PointStruct::new(i, em.clone(), payload);    
-        i += 1;
+        let point = PointStruct::new(i as u64, em.clone(), payload);    
         points.push(point);
         dim = if dim == 0 { em.len() } else { dim };
     }
