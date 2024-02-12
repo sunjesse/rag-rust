@@ -2,11 +2,12 @@ use anyhow::Result;
 use qdrant_client::prelude::*;
 use qdrant_client::qdrant::vectors_config::Config;
 use qdrant_client::qdrant::{
-    CreateCollection, SearchPoints, VectorParams, VectorsConfig,
+    HnswConfigDiff, CreateCollection, SearchPoints, VectorParams, VectorsConfig,
 };
 use serde_json::json;
 use std::convert::TryInto;
 use std::path::PathBuf;
+use std::collections::HashMap;
 use serde::Deserialize;
 use csv::ReaderBuilder;
 use llm::Model;
@@ -21,9 +22,14 @@ struct Row {
     r3: String,
 }
 
+struct IndexValue{
+    pub iso: bool,
+}
+
 pub struct Store {
     pub url: String,
     pub client:  QdrantClient,
+    pub indices: HashMap<String, IndexValue>,
 }
 
 impl Store {
@@ -33,6 +39,7 @@ impl Store {
         Ok(Self{
             url: url,
             client: client,
+            indices: HashMap::new(),
         })
     }
         
@@ -59,7 +66,7 @@ impl Store {
 
     pub async fn insert(&self, points: Vec<PointStruct>, index: &str, size: u64) -> Result<()> {
         println!("Inserting {} points into index '{}'...", points.len(), index);
-        if !(self.has_index(index).await?) {
+        if !(self.has_index(index)) {
             let _ = self.create_index(index, size).await;
         }
 
@@ -70,7 +77,12 @@ impl Store {
         Ok(())
     }
 
-    pub async fn create_index(&self, index: &str, size: u64) -> Result<()> {
+    pub async fn create_index(&mut self, index: &str, size: u64, isolation: bool) -> Result<()> {
+        let isolation_config = Some(HnswConfigDiff {
+            payload_m: Some(16),
+            m: Some(0),
+            ..Default::default()
+        });
         self.client
             .create_collection(&CreateCollection {
                 collection_name: index.into(),
@@ -81,27 +93,26 @@ impl Store {
                         ..Default::default()
                 })),
             }),
+            hnsw_config: if isolation { isolation_config } else { None }, 
             ..Default::default()
         })
         .await?;
+        self.indices.insert(index.into(), IndexValue { iso: isolation } );
         Ok(())  
     }
 
-    pub async fn delete_index(&self, index: &str) -> Result<()> { 
+    pub async fn delete_index(&mut self, index: &str) -> Result<()> { 
         self.client.delete_collection(index).await?;
+        self.indices.remove(index);
         Ok(())
     }
     
-    async fn has_index(&self, index: &str) -> Result<bool> {
-        let list = self.client.list_collections().await?;
-        for c in list.collections.iter() {
-            if c.name == index {
-                return Ok(true);
-            }   
+    fn has_index(&self, index: &str) -> bool {
+        match self.indices.get(index) {
+            Some(&id) => true,
+            _ => false,
         }
-        Ok(false)
     }
-    
 }
 
 
