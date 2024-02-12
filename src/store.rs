@@ -2,7 +2,7 @@ use anyhow::Result;
 use qdrant_client::prelude::*;
 use qdrant_client::qdrant::vectors_config::Config;
 use qdrant_client::qdrant::{
-    HnswConfigDiff, CreateCollection, SearchPoints, VectorParams, VectorsConfig,
+    Condition, Filter, HnswConfigDiff, CreateCollection, SearchPoints, VectorParams, VectorsConfig,
 };
 use serde_json::json;
 use std::convert::TryInto;
@@ -36,14 +36,14 @@ impl Store {
         })
     }
         
-    pub async fn search(&self, entry: Query, index: &str) -> Result<serde_json::Value> {
+    pub async fn search(&self, entry: Query, index: &str, group_id: u64) -> Result<serde_json::Value> {
         let embedding = entry.embedding.clone();
 
         let neighbours = self.client
             .search_points(&SearchPoints {
                 collection_name: index.into(),
                 vector: embedding,
-                //filter: Some(Filter::all([Condition::matches("id", entry.id)])),
+                filter: Some(Filter::must([Condition::matches("group_id", group_id as i64)])),
                 limit: 10,
                 with_payload: Some(true.into()),
                 ..Default::default()
@@ -139,7 +139,8 @@ fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<(Vec<PointStruc
                 "metadata": {
                     "title": batch[i].r1,
                     "description": batch[i].r3, 
-                }
+                },
+				"group_id": i,
             }
         )
         .try_into()

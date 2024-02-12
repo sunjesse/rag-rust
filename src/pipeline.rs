@@ -7,6 +7,7 @@ use std::{convert::Infallible, io::Write};
 pub struct RAG {
     pub prompt: String,
     pub reprompt: String,
+	pub group_id: u64, 
 }
 
 impl RAG {
@@ -18,7 +19,7 @@ impl RAG {
         };
         let rt = tokio::runtime::Runtime::new().unwrap();
         let result = rt.block_on(async {
-            client.search(entry, index).await
+            client.search(entry, index, self.group_id).await
         });
         let v = result.unwrap().get("description").map_or("not found".to_string(), |tv| tv.to_string());
         self.reprompt = self.reprompt.replace("_RETRIEVED_", &v).replace("_QUERY_", &self.prompt);       
