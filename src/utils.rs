@@ -22,6 +22,8 @@ pub struct Args {
     pub path: Option<PathBuf>,
     #[arg(long)]
 	pub rp_path: Option<PathBuf>,	
+	#[arg(long)]
+	pub isolation: Option<bool>,
 }
 
 impl Args {

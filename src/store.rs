@@ -7,7 +7,6 @@ use qdrant_client::qdrant::{
 use serde_json::json;
 use std::convert::TryInto;
 use std::path::PathBuf;
-use std::collections::HashMap;
 use serde::Deserialize;
 use csv::ReaderBuilder;
 use llm::Model;
@@ -22,14 +21,9 @@ struct Row {
     r3: String,
 }
 
-struct IndexValue{
-    pub iso: bool,
-}
-
 pub struct Store {
     pub url: String,
-    pub client:  QdrantClient,
-    pub indices: HashMap<String, IndexValue>,
+    pub client: QdrantClient,
 }
 
 impl Store {
@@ -39,7 +33,6 @@ impl Store {
         Ok(Self{
             url: url,
             client: client,
-            indices: HashMap::new(),
         })
     }
         
@@ -64,10 +57,10 @@ impl Store {
         Ok(text)
     }
 
-    pub async fn insert(&self, points: Vec<PointStruct>, index: &str, size: u64) -> Result<()> {
+    pub async fn insert(&self, points: Vec<PointStruct>, index: &str, size: u64, isolation: bool) -> Result<()> {
         println!("Inserting {} points into index '{}'...", points.len(), index);
-        if !(self.has_index(index)) {
-            let _ = self.create_index(index, size).await;
+        if !(self.has_index(index).await?) {
+            let _ = self.create_index(index, size, isolation).await;
         }
 
         self.client
@@ -77,7 +70,7 @@ impl Store {
         Ok(())
     }
 
-    pub async fn create_index(&mut self, index: &str, size: u64, isolation: bool) -> Result<()> {
+    pub async fn create_index(&self, index: &str, size: u64, isolation: bool) -> Result<()> {
         let isolation_config = Some(HnswConfigDiff {
             payload_m: Some(16),
             m: Some(0),
@@ -97,21 +90,22 @@ impl Store {
             ..Default::default()
         })
         .await?;
-        self.indices.insert(index.into(), IndexValue { iso: isolation } );
-        Ok(())  
+        Ok(()) 
     }
 
-    pub async fn delete_index(&mut self, index: &str) -> Result<()> { 
+    pub async fn delete_index(&self, index: &str) -> Result<()> { 
         self.client.delete_collection(index).await?;
-        self.indices.remove(index);
         Ok(())
     }
     
-    fn has_index(&self, index: &str) -> bool {
-        match self.indices.get(index) {
-            Some(&id) => true,
-            _ => false,
+    async fn has_index(&self, index: &str) -> Result<bool> {
+        let list = self.client.list_collections().await?;
+        for c in list.collections.iter() {
+            if c.name == index {
+                return Ok(true);
+            }   
         }
+        Ok(false)
     }
 }
 
@@ -157,14 +151,14 @@ fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<(Vec<PointStruc
     Ok((points, dim.try_into().unwrap()))
 }
 
-pub fn read_embed_insert(args: &Args, client: &Store, index: &str, model: &Box<dyn Model>) -> Result<()> {
+pub fn read_embed_insert(args: &Args, client: &Store, index: &str, model: &Box<dyn Model>, isolation: bool) -> Result<()> {
     let path = args.path.clone().unwrap();
     let rows = read_rows(&path);
     let Ok((embedded, size)) = embed_rows(rows?, model) else { todo!() };
     
     let rt = tokio::runtime::Runtime::new().unwrap();
     let _ = rt.block_on(async {
-        client.insert(embedded, index, size).await
+        client.insert(embedded, index, size, isolation).await
     });
     Ok(())
 } 

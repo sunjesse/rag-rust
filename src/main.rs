@@ -17,11 +17,13 @@ fn main() -> Result<()> {
     let reprompt_path = args.rp_path
         .as_deref()
         .unwrap_or(Path::new("./src/prompts/reprompt/reprompt.txt"));
+	let isolation = args.isolation
+		.unwrap_or(false);
 
     let client = store::Store::new("http://localhost:6334").unwrap();
     let Ok((model, query)) = embeddings::load(&args) else { todo!() };
 
-    let _ = store::read_embed_insert(&args, &client, index, &model); 
+    let _ = store::read_embed_insert(&args, &client, index, &model, isolation); 
 
     let reprompt = fs::read_to_string(reprompt_path).unwrap();
     let mut pipe = pipeline::RAG { prompt: query.to_string(), reprompt: reprompt.to_string() };
