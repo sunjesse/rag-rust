@@ -8,7 +8,7 @@ pub fn load(args: &Args) -> Result<(Box<dyn Model>, &str), Box<dyn std::error::E
     let params = llm::ModelParameters::default();
     let model = llm::load_dynamic(
         Some(arch),
-        &path,
+        path,
         source,
         params,
         llm::load_progress_callback_stdout,
