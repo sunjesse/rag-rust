@@ -36,14 +36,19 @@ impl Store {
         })
     }
         
-    pub async fn search(&self, entry: Query, index: &str, group_id: u64) -> Result<serde_json::Value> {
+    pub async fn search(&self, entry: Query, index: &str, group_id: Option<u64>) -> Result<serde_json::Value> {
         let embedding = entry.embedding.clone();
+        
+        let filter = match group_id {
+            Some(id) => Some(Filter::must([Condition::matches("group_id", id as i64)])),
+            _ => None,
+        };
 
         let neighbours = self.client
             .search_points(&SearchPoints {
                 collection_name: index.into(),
                 vector: embedding,
-                filter: Some(Filter::must([Condition::matches("group_id", group_id as i64)])),
+                filter: filter,
                 limit: 10,
                 with_payload: Some(true.into()),
                 ..Default::default()
@@ -109,7 +114,6 @@ impl Store {
     }
 }
 
-
 fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
     let mut csv = ReaderBuilder::new().has_headers(false).from_path(path)?;
     let mut batch = Vec::new(); 
@@ -140,7 +144,7 @@ fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<(Vec<PointStruc
                     "title": batch[i].r1,
                     "description": batch[i].r3, 
                 },
-				"group_id": i,
+                "group_id": i,
             }
         )
         .try_into()

@@ -7,7 +7,7 @@ use std::{convert::Infallible, io::Write};
 pub struct RAG {
     pub prompt: String,
     pub reprompt: String,
-	pub group_id: u64, 
+	pub group_id: Option<u64>, 
 }
 
 impl RAG {
