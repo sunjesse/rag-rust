@@ -3,6 +3,7 @@ use crate::utils::Query;
 use crate::embeddings::{get_embeddings};
 use crate::store::{Store};
 use std::{convert::Infallible, io::Write};
+use qdrant_client::qdrant::ScoredPoint;
 
 pub struct RAG {
     pub prompt: String,
@@ -18,10 +19,11 @@ impl RAG {
             embedding: query_embeddings,
         };
         let rt = tokio::runtime::Runtime::new().unwrap();
-        let result = rt.block_on(async {
+        let Ok(result) = rt.block_on(async {
             client.search(entry, index, self.group_id).await
-        });
-        let v = result.unwrap().get("description").map_or("not found".to_string(), |tv| tv.to_string());
+        }) else { todo!() };
+        let docs = Self::parse_retrieved(result, 3);    
+        let v = docs[0].get("description").map_or("not found".to_string(), |tv| tv.to_string());
         self.reprompt = self.reprompt.replace("_RETRIEVED_", &v).replace("_QUERY_", &self.prompt);       
         println!("{:?}", self.reprompt);
         v
@@ -54,6 +56,17 @@ impl RAG {
             Err(err) => println!("{err}"),
         }
         Ok(())
+    }
+
+    fn parse_retrieved(mut documents: Vec<ScoredPoint>, k: usize) -> Vec<serde_json::Value> {
+        let mut docs = Vec::new();
+        for (i, doc) in documents.iter_mut().enumerate() {
+            if i >= k { break; }
+            let payload = &mut doc.payload;
+            let text = payload.remove("metadata").unwrap().into_json();
+            docs.push(text);
+        }
+        docs
     }
     
     pub fn run(&mut self, index: &str, client: &Store, model: &Box<dyn Model>) -> Result<(), Box<dyn std::error::Error>>{

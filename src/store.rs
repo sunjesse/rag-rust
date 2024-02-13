@@ -2,7 +2,7 @@ use anyhow::Result;
 use qdrant_client::prelude::*;
 use qdrant_client::qdrant::vectors_config::Config;
 use qdrant_client::qdrant::{
-    Condition, Filter, HnswConfigDiff, CreateCollection, SearchPoints, VectorParams, VectorsConfig,
+    Condition, Filter, HnswConfigDiff, CreateCollection, SearchPoints, VectorParams, VectorsConfig, ScoredPoint,
 };
 use serde_json::json;
 use std::convert::TryInto;
@@ -36,7 +36,7 @@ impl Store {
         })
     }
         
-    pub async fn search(&self, entry: Query, index: &str, group_id: Option<u64>) -> Result<serde_json::Value> {
+    pub async fn search(&self, entry: Query, index: &str, group_id: Option<u64>) -> Result<Vec<ScoredPoint>> {
         let embedding = entry.embedding.clone();
         
         let filter = match group_id {
@@ -54,12 +54,7 @@ impl Store {
                 ..Default::default()
             })
             .await?;
-        let nearest = neighbours.result.into_iter().next().unwrap();
-        let mut payload = nearest.payload;
-        println!("{:?}", payload);
-        let text = payload.remove("metadata").unwrap().into_json();
-        println!("Found {}", text);
-        Ok(text)
+        Ok(neighbours.result)
     }
 
     pub async fn insert(&self, points: Vec<PointStruct>, index: &str, size: u64, isolation: bool) -> Result<()> {
