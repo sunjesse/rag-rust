@@ -21,26 +21,25 @@ async fn cli(q: String, model: &Box<dyn Model>, client: &Store, args: &Args) -> 
         .unwrap_or("first-index");
 
     let _ = store::read_embed_insert(
-            &args, 
-            &client, 
+            args, 
+            client, 
             index,
             model,
-            args.isolation.unwrap_or(false)); 
+            args.isolation.unwrap_or(false)).await; 
      
     let reprompt = fs::read_to_string(
         args.rp_path
         .as_deref()
         .unwrap_or(Path::new("./src/prompts/reprompt/reprompt.txt"))).unwrap();
-	println!("{:?}", q);
 
     let mut pipe = pipeline::RAG { 
         prompt: q, 
         reprompt: reprompt.to_string(),
         group_id: args.group_id,
     };
-    let _ = pipe.run(index, &client, &model).await;
+    let _ = pipe.run(index, client, model).await;
     Ok(())
-	
+    
 }
 
 #[get("/")]
@@ -50,8 +49,8 @@ async fn start() -> impl Responder {
 
 #[post("/query")]
 async fn post(req: String, model: Data<Arc<Box<dyn Model>>>, client: Data<Arc<Store>>, args: Data<Arc<Args>>) -> Result<HttpResponse, Error> {
-	let _ = cli(req, &model, &client, &args).await;
-	Ok(HttpResponse::Ok().finish())
+    let _ = cli(req, &model, &client, &args).await;
+    Ok(HttpResponse::Ok().finish())
 }
 
 #[actix_web::main]
@@ -59,15 +58,15 @@ async fn main() -> std::io::Result<()> {
     let args = Args::parse();
     let client = store::Store::new("http://localhost:6334").unwrap();
     let model = embeddings::load(&args).expect("Failed to load model");
-	let model_data = Data::new(Arc::new(model));
-	let client_data = Data::new(Arc::new(client));
-	let args_data = Data::new(Arc::new(args));
+    let model_data = Data::new(Arc::new(model));
+    let client_data = Data::new(Arc::new(client));
+    let args_data = Data::new(Arc::new(args));
 
     HttpServer::new(move || {
         App::new()
-			.app_data(args_data.clone())
-			.app_data(model_data.clone())
-			.app_data(client_data.clone())
+            .app_data(args_data.clone())
+            .app_data(model_data.clone())
+            .app_data(client_data.clone())
             .service(start)
             .service(post)
     })

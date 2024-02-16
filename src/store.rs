@@ -55,7 +55,7 @@ impl Store {
                 with_payload: Some(true.into()),
                 ..Default::default()
             })
-			.await?;
+            .await?;
         Ok(neighbours.result)
     }
 
@@ -163,11 +163,11 @@ pub async fn read_embed_insert(args: &Args, client: &Store, index: &str, model: 
     // Should fix it sometime.
     if !(args.upload.unwrap_or(false)) { return Ok(()); }
     println!("Start process for inserting from csv into vector db...");
-	let size = 2560;
+    let size = 2560;
     let path = args.path.clone().unwrap();
     let rows = read_rows(&path);
     let Ok(embedded) = embed_rows(rows?, model) else { todo!() };
     
-	let _ = client.insert(embedded, index, size, isolation).await;
+    let _ = client.insert(embedded, index, size, isolation).await;
     Ok(())
 } 

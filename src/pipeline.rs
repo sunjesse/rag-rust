@@ -13,14 +13,12 @@ pub struct RAG {
 
 impl RAG {
     pub async fn retrieve(&mut self, index: &str, client: &Store, model: &Box<dyn Model>) -> String {
-		println!("Runnign retrieve");
         let query_embeddings = get_embeddings(model.as_ref(), &self.prompt);
         let entry = Query {
             query: self.prompt.clone(),
             embedding: query_embeddings,
         };
         let Ok(result) = client.search(entry, index, self.group_id).await else { todo!() };
-		println!("Done search");
 
         let docs = Self::parse_retrieved(result, 3);    
         let v = docs[0].get("description").map_or("not found".to_string(), |tv| tv.to_string());
