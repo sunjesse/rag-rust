@@ -159,9 +159,6 @@ fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<Vec<PointStruct
 }
 
 pub async fn read_embed_insert(args: &Args, client: &Store, index: &str, model: &Box<dyn Model>, isolation: bool) -> Result<()> {
-    // Janky way to use args to determine whether we go through this upload process.
-    // Should fix it sometime.
-    if !(args.upload.unwrap_or(false)) { return Ok(()); }
     println!("Start process for inserting from csv into vector db...");
     let size = 2560;
     let path = args.path.clone().unwrap();

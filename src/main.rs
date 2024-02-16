@@ -20,13 +20,6 @@ async fn cli(q: String, model: &Box<dyn Model>, client: &Store, args: &Args) -> 
         .as_deref()
         .unwrap_or("first-index");
 
-    let _ = store::read_embed_insert(
-            args, 
-            client, 
-            index,
-            model,
-            args.isolation.unwrap_or(false)).await; 
-     
     let reprompt = fs::read_to_string(
         args.rp_path
         .as_deref()
@@ -42,14 +35,20 @@ async fn cli(q: String, model: &Box<dyn Model>, client: &Store, args: &Args) -> 
     
 }
 
-#[get("/")]
-async fn start() -> impl Responder {
-    HttpResponse::Ok().body("RAG in Rust")
-}
-
 #[post("/query")]
 async fn post(req: String, model: Data<Arc<Box<dyn Model>>>, client: Data<Arc<Store>>, args: Data<Arc<Args>>) -> Result<HttpResponse, Error> {
     let _ = cli(req, &model, &client, &args).await;
+    Ok(HttpResponse::Ok().finish())
+}
+
+#[post("/upload")]
+async fn upload(index: String, model: Data<Arc<Box<dyn Model>>>, client: Data<Arc<Store>>, args: Data<Arc<Args>>) -> Result<HttpResponse, Error> {
+    let _ = store::read_embed_insert(
+        &args,
+        &client,
+        &index,
+        &model,
+        args.isolation.unwrap_or(false)).await; 
     Ok(HttpResponse::Ok().finish())
 }
 
@@ -67,7 +66,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(args_data.clone())
             .app_data(model_data.clone())
             .app_data(client_data.clone())
-            .service(start)
+            .service(upload)
             .service(post)
     })
     .bind(("127.0.0.1", 8080))?
