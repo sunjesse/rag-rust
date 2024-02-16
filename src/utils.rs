@@ -21,11 +21,13 @@ pub struct Args {
     #[arg(long, short = 'p')]
     pub path: Option<PathBuf>,
     #[arg(long)]
-	pub rp_path: Option<PathBuf>,	
-	#[arg(long)]
-	pub isolation: Option<bool>,
-	#[arg(long)]
-	pub group_id: Option<u64>,
+    pub rp_path: Option<PathBuf>,   
+    #[arg(long)]
+    pub isolation: Option<bool>,
+    #[arg(long)]
+    pub group_id: Option<u64>,
+    #[arg(long)]
+    pub upload: Option<bool>,
 }
 
 impl Args {

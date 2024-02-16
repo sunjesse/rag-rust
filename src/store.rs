@@ -73,11 +73,12 @@ impl Store {
     }
 
     pub async fn create_index(&self, index: &str, size: u64, isolation: bool) -> Result<()> {
-        let isolation_config = Some(HnswConfigDiff {
+        let isolation_config = if isolation { Some(HnswConfigDiff {
             payload_m: Some(16),
             m: Some(0),
             ..Default::default()
-        });
+        }) } else { None };
+
         self.client
             .create_collection(&CreateCollection {
                 collection_name: index.into(),
@@ -88,7 +89,7 @@ impl Store {
                         ..Default::default()
                 })),
             }),
-            hnsw_config: if isolation { isolation_config } else { None }, 
+            hnsw_config: isolation_config, 
             ..Default::default()
         })
         .await?;
@@ -134,6 +135,7 @@ fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
 fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<(Vec<PointStruct>, u64)>{
     let embd = batch.par_iter().map(|r| get_embeddings(model.as_ref(), &r.description));
     let points = Mutex::new(vec![]);
+
     embd.enumerate().for_each(|(i, em)| {
         let id = batch[i].id;
         let payload: Payload = json!(
@@ -151,11 +153,16 @@ fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<(Vec<PointStruc
         let mut points = points.lock().unwrap();
         points.push(point);
     });
+
     let points_vec = points.lock().unwrap().clone(); 
     Ok((points_vec, 2560))
 }
 
 pub fn read_embed_insert(args: &Args, client: &Store, index: &str, model: &Box<dyn Model>, isolation: bool) -> Result<()> {
+    // Janky way to use args to determine whether we go through this upload process.
+    // Should fix it sometime.
+    if !(args.upload.unwrap_or(false)) { return Ok(()); }
+    println!("Start process for inserting from csv into vector db...");
     let path = args.path.clone().unwrap();
     let rows = read_rows(&path);
     let Ok((embedded, size)) = embed_rows(rows?, model) else { todo!() };
