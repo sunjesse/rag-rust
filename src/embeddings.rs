@@ -2,7 +2,7 @@ use crate::utils::Args;
 use llm::Model;
 use std::thread;
 
-pub fn load(args: &Args) -> Result<(Box<dyn Model>, &str), Box<dyn std::error::Error>>{
+pub fn load(args: &Args) -> Result<Box<dyn Model>, Box<dyn std::error::Error>>{
     let source = args.to_tokenizer_source();
     let arch = args.model_architecture;
     let path = &args.model_path;
@@ -17,11 +17,7 @@ pub fn load(args: &Args) -> Result<(Box<dyn Model>, &str), Box<dyn std::error::E
     .map_err(|err| {
         Box::new(err) as Box<dyn std::error::Error>
     })?;
-    let query = args
-        .query
-        .as_deref()
-        .unwrap_or("This is a default query");
-    Ok((model, query))
+    Ok(model)
 } 
 
 pub fn get_embeddings(
@@ -46,8 +42,8 @@ pub fn get_embeddings(
     output_request.embeddings.unwrap()
 }
 
-pub fn load_and_embed(args: Args) -> Result<(String, Vec<f32>), Box<dyn std::error::Error>> {
-    let (model, query) = load(&args)?;
+pub fn load_and_embed(args: Args, query: &str) -> Result<Vec<f32>, Box<dyn std::error::Error>> {
+    let model = load(&args)?;
     let embeddings = get_embeddings(model.as_ref(), query);
-    Ok((query.to_string(), embeddings))
+    Ok(embeddings)
 }

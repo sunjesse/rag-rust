@@ -12,24 +12,22 @@ pub struct RAG {
 }
 
 impl RAG {
-    pub fn retrieve(&mut self, index: &str, client: &Store, model: &Box<dyn Model>) -> String {
+    pub async fn retrieve(&mut self, index: &str, client: &Store, model: &Box<dyn Model>) -> String {
         let query_embeddings = get_embeddings(model.as_ref(), &self.prompt);
         let entry = Query {
             query: self.prompt.clone(),
             embedding: query_embeddings,
         };
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let Ok(result) = rt.block_on(async {
-            client.search(entry, index, self.group_id).await
-        }) else { todo!() };
+        let Ok(result) = client.search(entry, index, self.group_id).await else { todo!() };
+
         let docs = Self::parse_retrieved(result, 3);    
         let v = docs[0].get("description").map_or("not found".to_string(), |tv| tv.to_string());
         self.reprompt = self.reprompt.replace("_RETRIEVED_", &v).replace("_QUERY_", &self.prompt);       
-        println!("{:?}", self.reprompt);
         v
     }
 
     pub fn prompt(&self, model: &Box<dyn Model>) -> Result<(), Box<dyn std::error::Error>> {
+        println!("{:?}", self.reprompt);
         let mut session = model.start_session(Default::default());
         let res = session.infer::<Infallible>(
             model.as_ref(),
@@ -69,8 +67,8 @@ impl RAG {
         docs
     }
     
-    pub fn run(&mut self, index: &str, client: &Store, model: &Box<dyn Model>) -> Result<(), Box<dyn std::error::Error>>{
-        let _ = self.retrieve(index, client, model);
+    pub async fn run(&mut self, index: &str, client: &Store, model: &Box<dyn Model>) -> Result<(), Box<dyn std::error::Error>>{
+        let _ = self.retrieve(index, client, model).await;
         let _ = self.prompt(model);
         Ok(())  
     }
