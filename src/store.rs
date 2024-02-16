@@ -145,7 +145,7 @@ fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<(Vec<PointStruc
         )
         .try_into()
         .unwrap();
-        let point = PointStruct::new(id as u64, em.clone(), payload);    
+        let point = PointStruct::new(id, em.clone(), payload);    
         points.push(point);
         dim = if dim == 0 { em.len() } else { dim };
     }
