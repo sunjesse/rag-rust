@@ -16,9 +16,9 @@ use crate::embeddings::get_embeddings;
 
 #[derive(Debug, Deserialize)]
 struct Row {
-    r1: String,
-    r2: String,
-    r3: String,
+    id: u64,
+    title: String,
+    description: String,
 }
 
 pub struct Store {
@@ -129,22 +129,23 @@ fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
 }
 
 fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<(Vec<PointStruct>, u64)>{
-    let embd = batch.iter().map(|r| get_embeddings(model.as_ref(), &r.r2));
+    let embd = batch.iter().map(|r| get_embeddings(model.as_ref(), &r.description));
     let mut points = Vec::new();
     let mut dim = 0;
     for (i, em) in embd.enumerate() {
+        let id = batch[i].id;
         let payload: Payload = json!(
             {
                 "metadata": {
-                    "title": batch[i].r1,
-                    "description": batch[i].r3, 
+                    "title": batch[i].title,
+                    "description": batch[i].description, 
                 },
-                "group_id": i,
+                "group_id": id,
             }
         )
         .try_into()
         .unwrap();
-        let point = PointStruct::new(i as u64, em.clone(), payload);    
+        let point = PointStruct::new(id as u64, em.clone(), payload);    
         points.push(point);
         dim = if dim == 0 { em.len() } else { dim };
     }
