@@ -1659,6 +1659,7 @@ dependencies = [
  "openai-api-rs",
  "qdrant-client",
  "rand",
+ "rayon",
  "serde",
  "serde_json",
  "tokio",

@@ -17,14 +17,14 @@ fn main() -> Result<()> {
 
     let client = store::Store::new("http://localhost:6334").unwrap();
     let Ok((model, query)) = embeddings::load(&args) else { todo!() };
-	/*
+    
     let _ = store::read_embed_insert(
             &args, 
             &client, 
             index,
             &model,
             args.isolation.unwrap_or(false)); 
-   	*/ 
+     
     let reprompt = fs::read_to_string(
         args.rp_path
         .as_deref()

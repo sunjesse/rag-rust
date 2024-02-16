@@ -4,15 +4,17 @@ use qdrant_client::qdrant::vectors_config::Config;
 use qdrant_client::qdrant::{
     Condition, Filter, HnswConfigDiff, CreateCollection, SearchPoints, VectorParams, VectorsConfig, ScoredPoint,
 };
-use serde_json::json;
 use std::convert::TryInto;
 use std::path::PathBuf;
+use std::sync::Mutex;
 use serde::Deserialize;
+use serde_json::json;
 use csv::ReaderBuilder;
 use llm::Model;
 
 use crate::utils::{Query, Args};
 use crate::embeddings::get_embeddings;
+use rayon::prelude::*;
 
 #[derive(Debug, Deserialize)]
 struct Row {
@@ -110,6 +112,7 @@ impl Store {
 }
 
 fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
+    // Optimization #1: Stream rows of CSV instead of reading 
     let mut csv = ReaderBuilder::new().has_headers(false).from_path(path)?;
     let mut batch = Vec::new(); 
 
@@ -129,10 +132,9 @@ fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
 }
 
 fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<(Vec<PointStruct>, u64)>{
-    let embd = batch.iter().map(|r| get_embeddings(model.as_ref(), &r.description));
-    let mut points = Vec::new();
-    let mut dim = 0;
-    for (i, em) in embd.enumerate() {
+    let embd = batch.par_iter().map(|r| get_embeddings(model.as_ref(), &r.description));
+    let points = Mutex::new(vec![]);
+    embd.enumerate().for_each(|(i, em)| {
         let id = batch[i].id;
         let payload: Payload = json!(
             {
@@ -146,10 +148,11 @@ fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<(Vec<PointStruc
         .try_into()
         .unwrap();
         let point = PointStruct::new(id, em.clone(), payload);    
+        let mut points = points.lock().unwrap();
         points.push(point);
-        dim = if dim == 0 { em.len() } else { dim };
-    }
-    Ok((points, dim.try_into().unwrap()))
+    });
+    let points_vec = points.lock().unwrap().clone(); 
+    Ok((points_vec, 2560))
 }
 
 pub fn read_embed_insert(args: &Args, client: &Store, index: &str, model: &Box<dyn Model>, isolation: bool) -> Result<()> {

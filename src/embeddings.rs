@@ -1,5 +1,6 @@
 use crate::utils::Args;
 use llm::Model;
+use std::thread;
 
 pub fn load(args: &Args) -> Result<(Box<dyn Model>, &str), Box<dyn std::error::Error>>{
     let source = args.to_tokenizer_source();
@@ -27,6 +28,7 @@ pub fn get_embeddings(
     model: &dyn llm::Model,
     query: &str,
 ) -> Vec<f32> {
+    println!("Spawning `get_embeddings` on thread {:?}", thread::current().id());
     let mut session = model.start_session(Default::default());
     let mut output_request = llm::OutputRequest {
         all_logits: None,
