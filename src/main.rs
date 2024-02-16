@@ -3,38 +3,75 @@ use anyhow::Result;
 use utils::Args;
 use std::fs;
 use std::path::Path;
+use actix_web::{get, post, App, Responder, Error, HttpResponse, HttpServer};
+use std::sync::Arc;
+use actix_web::web::Data;
+
+use crate::store::{Store};
+use llm::Model;
 
 mod utils;
 mod store;
 mod embeddings;
 mod pipeline;
 
-fn main() -> Result<()> {
-    let args = Args::parse();
+async fn cli(q: String, model: &Box<dyn Model>, client: &Store, args: &Args) -> Result<()> {
     let index = args.index
         .as_deref()
         .unwrap_or("first-index");
 
-    let client = store::Store::new("http://localhost:6334").unwrap();
-    let Ok((model, query)) = embeddings::load(&args) else { todo!() };
-    
     let _ = store::read_embed_insert(
             &args, 
             &client, 
             index,
-            &model,
+            model,
             args.isolation.unwrap_or(false)); 
      
     let reprompt = fs::read_to_string(
         args.rp_path
         .as_deref()
         .unwrap_or(Path::new("./src/prompts/reprompt/reprompt.txt"))).unwrap();
+	println!("{:?}", q);
 
     let mut pipe = pipeline::RAG { 
-        prompt: query.to_string(), 
+        prompt: q, 
         reprompt: reprompt.to_string(),
         group_id: args.group_id,
     };
-    let _ = pipe.run(index, &client, &model);
+    let _ = pipe.run(index, &client, &model).await;
     Ok(())
+	
+}
+
+#[get("/")]
+async fn start() -> impl Responder {
+    HttpResponse::Ok().body("RAG in Rust")
+}
+
+#[post("/query")]
+async fn post(req: String, model: Data<Arc<Box<dyn Model>>>, client: Data<Arc<Store>>, args: Data<Arc<Args>>) -> Result<HttpResponse, Error> {
+	let _ = cli(req, &model, &client, &args).await;
+	Ok(HttpResponse::Ok().finish())
+}
+
+#[actix_web::main]
+async fn main() -> std::io::Result<()> {
+    let args = Args::parse();
+    let client = store::Store::new("http://localhost:6334").unwrap();
+    let model = embeddings::load(&args).expect("Failed to load model");
+	let model_data = Data::new(Arc::new(model));
+	let client_data = Data::new(Arc::new(client));
+	let args_data = Data::new(Arc::new(args));
+
+    HttpServer::new(move || {
+        App::new()
+			.app_data(args_data.clone())
+			.app_data(model_data.clone())
+			.app_data(client_data.clone())
+            .service(start)
+            .service(post)
+    })
+    .bind(("127.0.0.1", 8080))?
+    .run()
+    .await
 }
