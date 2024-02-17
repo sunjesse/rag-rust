@@ -3,7 +3,7 @@ use anyhow::Result;
 use utils::Args;
 use std::fs;
 use std::path::Path;
-use actix_web::{get, post, App, Responder, Error, HttpResponse, HttpServer};
+use actix_web::{post, App, Error, HttpResponse, HttpServer};
 use std::sync::Arc;
 use actix_web::web::Data;
 
@@ -15,7 +15,8 @@ mod store;
 mod embeddings;
 mod pipeline;
 
-async fn cli(q: String, model: &Box<dyn Model>, client: &Store, args: &Args) -> Result<()> {
+#[post("/query")]
+async fn post(req: String, model: Data<Arc<Box<dyn Model>>>, client: Data<Arc<Store>>, args: Data<Arc<Args>>) -> Result<HttpResponse, Error> {
     let index = args.index
         .as_deref()
         .unwrap_or("first-index");
@@ -26,18 +27,11 @@ async fn cli(q: String, model: &Box<dyn Model>, client: &Store, args: &Args) -> 
         .unwrap_or(Path::new("./src/prompts/reprompt/reprompt.txt"))).unwrap();
 
     let mut pipe = pipeline::RAG { 
-        prompt: q, 
+        prompt: req, 
         reprompt: reprompt.to_string(),
         group_id: args.group_id,
     };
-    let _ = pipe.run(index, client, model).await;
-    Ok(())
-    
-}
-
-#[post("/query")]
-async fn post(req: String, model: Data<Arc<Box<dyn Model>>>, client: Data<Arc<Store>>, args: Data<Arc<Args>>) -> Result<HttpResponse, Error> {
-    let _ = cli(req, &model, &client, &args).await;
+    let _ = pipe.run(&index, &client, &model).await;
     Ok(HttpResponse::Ok().finish())
 }
 
