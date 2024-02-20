@@ -6,6 +6,7 @@ use qdrant_client::qdrant::{
 };
 use std::convert::TryInto;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Mutex;
 use serde::Deserialize;
 use serde_json::json;
@@ -132,11 +133,16 @@ fn read_rows(path: &PathBuf) -> Result<Vec<Row>> {
     Ok(batch)
 }
 
-fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<Vec<PointStruct>>{
-    let embd = batch.par_iter().map(|r| get_embeddings(model.as_ref(), &r.description));
+fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<(Vec<PointStruct>, u64)>{
+    let embd = batch.par_iter().map(|r| {
+        let em = get_embeddings(model.as_ref(), &r.description);
+        let ln = em.len();  
+        (em, ln)
+    });
     let points = Mutex::new(vec![]);
-
-    embd.enumerate().for_each(|(i, em)| {
+    let dim = AtomicUsize::new(0);
+        
+    embd.enumerate().for_each(|(i, (em, ln))| {
         let id = batch[i].id;
         let payload: Payload = json!(
             {
@@ -149,21 +155,24 @@ fn embed_rows(batch: Vec<Row>, model: &Box<dyn Model>) -> Result<Vec<PointStruct
         )
         .try_into()
         .unwrap();
-        let point = PointStruct::new(id, em.clone(), payload);    
+        let point = PointStruct::new(id, em, payload);    
         let mut points = points.lock().unwrap();
         points.push(point);
+        dim.fetch_update(Ordering::SeqCst, Ordering::SeqCst, |x| {
+            if x == 0 { Some(ln) } else { Some(x) }
+        }).ok();
     });
 
-    let points_vec = points.lock().unwrap().clone(); 
-    Ok(points_vec)
+    let points_vec = points.lock().unwrap().to_vec(); 
+    Ok((points_vec, dim.load(Ordering::SeqCst) as u64))
 }
 
 pub async fn read_embed_insert(args: &Args, client: &Store, index: &str, model: &Box<dyn Model>, isolation: bool) -> Result<()> {
     println!("Start process for inserting from csv into vector db...");
-    let size = 2560;
     let path = args.path.clone().unwrap();
     let rows = read_rows(&path);
-    let Ok(embedded) = embed_rows(rows?, model) else { todo!() };
+    let Ok((embedded, size)) = embed_rows(rows?, model) else { todo!() };
+    println!("DIM {:?}", size);
     
     let _ = client.insert(embedded, index, size, isolation).await;
     Ok(())
