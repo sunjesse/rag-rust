@@ -2,6 +2,9 @@ use llm::Model;
 use crate::utils::Query;
 use crate::embeddings::{get_embeddings};
 use crate::store::{Store};
+use actix_web::{web, Error};
+use tokio::sync::mpsc::Sender;
+
 use std::{convert::Infallible, io::Write};
 use qdrant_client::qdrant::ScoredPoint;
 
@@ -26,7 +29,7 @@ impl RAG {
         v
     }
 
-    pub fn prompt(&self, model: &Box<dyn Model>) -> Result<(), Box<dyn std::error::Error>> {
+    pub async fn prompt(&self, model: &Box<dyn Model>, tx: Sender<Result<web::Bytes, Error>>) -> Result<(), Box<dyn std::error::Error>> {
         println!("{:?}", self.reprompt);
         let mut session = model.start_session(Default::default());
         let res = session.infer::<Infallible>(
@@ -41,8 +44,7 @@ impl RAG {
             &mut Default::default(),
             |r| match r {
                 llm::InferenceResponse::PromptToken(t) | llm::InferenceResponse::InferredToken(t) => {
-                    print!("{t}");
-                    std::io::stdout().flush().unwrap();
+                    tx.send(Ok::<_, Error>(web::Bytes::from(t))).await;
 
                     Ok(llm::InferenceFeedback::Continue)
                 }
@@ -69,7 +71,7 @@ impl RAG {
     
     pub async fn run(&mut self, index: &str, client: &Store, model: &Box<dyn Model>) -> Result<(), Box<dyn std::error::Error>>{
         let _ = self.retrieve(index, client, model).await;
-        let _ = self.prompt(model);
+        //let _ = self.prompt(model);
         Ok(())  
     }
 

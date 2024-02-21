@@ -3,9 +3,16 @@ use anyhow::Result;
 use utils::Args;
 use std::fs;
 use std::path::Path;
-use actix_web::{post, App, Error, HttpResponse, HttpServer};
+use actix_web::{post, get, web, App, Error, HttpResponse, HttpServer};
 use std::sync::Arc;
 use actix_web::web::Data;
+use futures::StreamExt;
+// experimental
+use futures::stream::Stream;
+use std::pin::Pin;
+use tokio::sync::mpsc;
+use tokio_stream::wrappers::ReceiverStream;
+// end
 
 use crate::store::{Store};
 use llm::Model;
@@ -31,8 +38,15 @@ async fn post(req: String, model: Data<Arc<Box<dyn Model>>>, client: Data<Arc<St
         reprompt: reprompt.to_string(),
         group_id: args.group_id,
     };
-    let _ = pipe.run(&index, &client, &model).await;
-    Ok(HttpResponse::Ok().finish())
+    //let _ = pipe.run(&index, &client, &model).await;
+    // Ok(HttpResponse::Ok().finish())
+    let _ = pipe.retrieve(&index, &client, &model).await;
+
+    let (tx, rx) = mpsc::channel(32);
+    let _ = pipe.prompt(&model, tx).await;
+    let body_stream: Pin<Box<dyn Stream<Item = Result<web::Bytes, Error>>>> = Box::pin(ReceiverStream::new(rx));
+
+    Ok(HttpResponse::Ok().streaming(body_stream))
 }
 
 #[post("/upload")]
@@ -44,6 +58,18 @@ async fn upload(index: String, model: Data<Arc<Box<dyn Model>>>, client: Data<Ar
         &model,
         args.isolation.unwrap_or(false)).await; 
     Ok(HttpResponse::Ok().finish())
+}
+
+#[get("/stream")]
+async fn stream(mut body: web::Payload) -> HttpResponse {
+    let stream = body.map(|item| {
+        item.map_err(Error::from)
+            .map(|bytes| web::Bytes::from(bytes))
+    });
+
+    HttpResponse::Ok()
+        .content_type("application/octet-stream")
+        .streaming(stream)
 }
 
 #[actix_web::main]
@@ -61,6 +87,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(model_data.clone())
             .app_data(client_data.clone())
             .service(upload)
+            .service(stream)
             .service(post)
     })
     .bind(("127.0.0.1", 8080))?
